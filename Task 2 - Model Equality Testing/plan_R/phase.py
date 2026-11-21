@@ -116,7 +116,7 @@ def temperature_result(temp):
 
 
 def phase(rows, size):
-    phase_runs, replay_runs = defaultdict(list), defaultdict(list)
+    phase_runs, replay_runs = defaultdict(dict), defaultdict(list)
     for row in rows:
         if row["event"] != "answer":
             continue
@@ -124,13 +124,13 @@ def phase(rows, size):
         if isinstance(block, int):
             replay_runs[row.get("heldout", False), block].append(row)
         else:
-            phase_runs[block].append(row)
+            phase_runs[block][row["endpoint"], row["id"], row["repeat"]] = row
     result = {}
     for size_phase in (20, 12):
         slots = phase_slots(size=size_phase)
         by_id = {s.id: s for s in slots}
         data = defaultdict(list)
-        for row in phase_runs[f"phase{size_phase}"]:
+        for row in phase_runs[f"phase{size_phase}"].values():
             data[row["variant"]].append(row)
         plain = panel(data["plain"], slots)
         marked = panel(data["watermark"], slots)

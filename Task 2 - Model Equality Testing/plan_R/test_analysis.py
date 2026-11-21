@@ -14,7 +14,7 @@ import numpy as np
 from collect import TASK_PATH, completion, request
 from features import DEFAULTS, clipped_llr, dispersion, flag_features, parse_burst, signatures
 from partition import confusion, family_proposals, mcc, optimize_joint, pairs, rule, score
-from phase import effectiveness, free_text_null, main as phase_main, watermark_gate
+from phase import effectiveness, free_text_null, main as phase_main, phase, watermark_gate
 from protocol import manifest
 from replay import check_budget, holdout
 from simulate import VARIANTS, phase_jobs, replay_slots
@@ -110,6 +110,16 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(result["B7"]["n_positives"], 1)
         self.assertEqual(result["20"]["B2"]["n"], 1)
         self.assertAlmostEqual(result["20"]["B3"]["plain_item_coverage"], 1 / len(slot.items))
+
+    def test_phase_counts_shared_requests_once_across_splits(self):
+        block, slot, rep = next(phase_jobs("plain", 1))
+        first = {"event": "answer", "endpoint": "ref-01", "block": block, "id": slot.id,
+                 "variant": "plain", "repeat": rep, "response": f"{slot.items[0].tag} A"}
+        duplicate = dict(first, heldout=True)
+        second = dict(duplicate, repeat=rep + 1, response=f"{slot.items[0].tag} B")
+        result = phase([first, duplicate, second], 20)["20"]
+        self.assertEqual(result["B2"]["n"], 2)
+        self.assertEqual(result["B2prime"]["plain"], {"n": 1, "identical": 0})
 
     def test_exact_budget_and_stable_holdout(self):
         slots = replay_slots(3)
