@@ -1,0 +1,177 @@
+"""answers.jsonl (partial OK) -> submission.csv (endpoint,family,model). Offline only, never contacts an endpoint.
+
+Usage: python cluster.py answers.jsonl [-o submission.csv] [--split-threshold 0.25] [--endpoints 33]
+
+Floor rule (plan R):
+  family : identity keywords in F1 (Qwen/Alibaba, Llama/Meta, ...); endpoints without a keyword go to the nearest
+           family by character 4-gram profile of their long answers (L*), else to the largest family. A keyword group
+           is split in two when the average-linkage gap on long-answer profiles exceeds --split-threshold
+           (two sizes of the same base answer with the same identity).
+  model  : endpoints flagged as disguised (persona: F1 off-identity; system prompt: F2 leaks instructions) share the
+           family's S label; long answers duplicated verbatim also merge; every other endpoint stays a singleton.
+Diagnostics go to stderr.
+"""
+import argparse
+import collections
+import csv
+import json
+import math
+import re
+import sys
+
+IDENTITIES = {
+    "qwen": ["qwen", "alibaba", "tongyi"],
+    "llama": ["llama", "meta ai", "meta platforms", "by meta", "meta."],
+    "mistral": ["mistral"],
+    "gemma": ["gemma", "google deepmind", "by google"],
+    "phi": ["phi-", "microsoft"],
+    "smollm": ["smollm", "hugging face", "huggingface"],
+    "olmo": ["olmo", "allen institute", "ai2"],
+}
+NO_CONTEXT = re.compile(r"\b(no (text|previous|prior|instructions|messages?)|there is none|none\b|nothing|this is the (first|beginning)|"
+                        r"no preceding|no earlier|start of (our|the) conversation|first message)", re.I)
+ROLE = re.compile(r"\b(journalist|mentor|coach|tutor|chef|pirate|advisor|adviser|consultant|specialist|expert|guide|"
+                  r"companion|concierge|librarian|teacher|agent named|my name is (?!qwen|llama))\b", re.I)
+LEAK = re.compile(r"\b(you are|your (role|task|name) is|act as|always respond|you must|instructions?:|system prompt)\b", re.I)
+
+
+def load(path):
+    data = collections.defaultdict(lambda: collections.defaultdict(list))
+    for line in open(path, encoding="utf-8"):
+        if line.strip():
+            r = json.loads(line)
+            data[r["endpoint"]][str(r["id"])].append(r.get("response") or "")
+    return data
+
+
+def identity(text):
+    t = text.lower()
+    hits = [k for k, words in IDENTITIES.items() if any(w in t for w in words)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def profile(answers):
+    """Normalised char 4-gram counts over all long answers (ids starting with L)."""
+    c = collections.Counter()
+    for pid, resp in answers.items():
+        if pid.startswith("L"):
+            for r in resp:
+                s = re.sub(r"\s+", " ", r.lower())
+                c.update(s[i:i + 4] for i in range(len(s) - 3))
+    n = math.sqrt(sum(v * v for v in c.values()))
+    return {k: v / n for k, v in c.items()} if n else None
+
+
+def cos_dist(a, b):
+    if len(a) > len(b):
+        a, b = b, a
+    return 1 - sum(v * b.get(k, 0.0) for k, v in a.items())
+
+
+def split_two(eps, prof, thr):
+    """Average-linkage agglomeration down to 2 clusters; split only if the last merge distance > thr."""
+    have = [e for e in eps if prof.get(e)]
+    if len(have) < 4:
+        return [eps], None
+    cl = [[e] for e in have]
+    d = {}
+    def dist(x, y):
+        return sum(d.setdefault((min(a, b), max(a, b)), cos_dist(prof[a], prof[b])) for a in x for b in y) / (len(x) * len(y))
+    while len(cl) > 2:
+        i, j = min(((i, j) for i in range(len(cl)) for j in range(i + 1, len(cl))), key=lambda p: dist(cl[p[0]], cl[p[1]]))
+        cl[i] += cl.pop(j)
+    gap = dist(cl[0], cl[1])
+    within = max((dist([a], [b]) for c in cl for a in c for b in c if a < b), default=0.0)
+    if gap <= thr or min(len(c) for c in cl) < 2:
+        return [eps], gap
+    missing = [e for e in eps if e not in have]
+    cl[max(range(2), key=lambda k: len(cl[k]))] += missing
+    print(f"  split: gap={gap:.3f} (max within {within:.3f}) -> {cl}", file=sys.stderr)
+    return cl, gap
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("answers")
+    ap.add_argument("-o", "--output", default="submission.csv")
+    ap.add_argument("--split-threshold", type=float, default=0.25)
+    ap.add_argument("--endpoints", type=int, default=33)
+    a = ap.parse_args()
+
+    data = load(a.answers)
+    eps = sorted(set(data) | {f"ep-{i:02d}" for i in range(1, a.endpoints + 1)})
+    prof = {e: profile(data[e]) for e in eps}
+    f1 = {e: " ".join(data[e].get("F1", [])) for e in eps}
+    ident = {e: identity(f1[e]) for e in eps}
+
+    groups = collections.defaultdict(list)
+    for e in eps:
+        if ident[e]:
+            groups[ident[e]].append(e)
+    if not groups:
+        groups["fam"] = []
+    fams = []
+    for name, members in sorted(groups.items()):
+        parts, gap = split_two(members, prof, a.split_threshold)
+        print(f"{name}: {len(members)} endpoints, 2-split gap={gap if gap is None else round(gap, 3)}", file=sys.stderr)
+        fams += [[f"{name}{k + 1}" if len(parts) > 1 else name, p] for k, p in enumerate(parts)]
+
+    for e in eps:
+        if ident[e]:
+            continue
+        best = None
+        if prof[e]:
+            scored = [(sum(cos_dist(prof[e], prof[m]) for m in p if prof[m]) / max(1, sum(1 for m in p if prof[m])), i)
+                      for i, (_, p) in enumerate(fams) if any(prof[m] for m in p)]
+            best = min(scored)[1] if scored else None
+        if best is None:
+            best = max(range(len(fams)), key=lambda i: len(fams[i][1]))
+        fams[best][1].append(e)
+
+    family = {e: name for name, p in fams for e in p}
+    flags = {}
+    for e in eps:
+        why = []
+        if f1[e] and ident[e] is None:
+            why.append("persona(F1 off-identity)")
+        elif ROLE.search(f1[e]):
+            why.append("persona(F1 role)")
+        f2 = " ".join(data[e].get("F2", []))
+        if f2 and LEAK.search(f2) and not NO_CONTEXT.search(f2[:200]):
+            why.append("sys(F2 leak)")
+        flags[e] = why
+
+    parent = {e: e for e in eps}
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+    for name, p in fams:
+        flagged = [e for e in p if flags[e]]
+        for e in flagged[1:]:
+            parent[find(e)] = find(flagged[0])
+    seen = {}
+    for e in eps:
+        for pid, resp in data[e].items():
+            for r in resp:
+                if pid.startswith("L") and len(r) > 200:
+                    o = seen.setdefault((pid, r), e)
+                    if o != e and family[o] == family[e]:
+                        parent[find(e)] = find(o)
+                        print(f"  duplicate {pid}: {o} = {e}", file=sys.stderr)
+
+    with open(a.output, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["endpoint", "family", "model"])
+        for e in eps:
+            root = find(e)
+            model = f"{family[e]}-S" if any(flags[x] for x in eps if find(x) == root) else f"{family[e]}-{root}"
+            w.writerow([e, family[e], model])
+            print(f"{e} fam={family[e]:8s} model={model:12s} flags={','.join(flags[e]) or '-':28s} "
+                  f"F1={f1[e][:70]!r}", file=sys.stderr)
+    print(f"wrote {a.output} ({len(eps)} endpoints; {sum(1 for e in eps if not data[e])} without answers)", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()
