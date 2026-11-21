@@ -79,6 +79,8 @@ Le mode `--model-rule long-match` propose une partition conservatrice à partir 
 
 L’option expérimentale `--split-flag-families` subdivise une famille initiale si au moins deux endpoints donnent exactement la même paire de réponses F3 et F4. La comparaison conserve les espaces internes. Dans l’instantané de 137 réponses, deux groupes de 5 et 2 endpoints satisfont cette règle. Les cinq réponses longues couvrent seulement L01 et le CSV conserve 33 modèles distincts. Les groupes F3/F4 sont des hypothèses issues de cet instantané, sans mesure sur données étiquetées.
 
+Sur les cinq blocs du holdout R, `long-match` ne rapproche aucun modèle, même en imposant les vraies familles. Avec les familles inférées, le MCC modèle reste à zéro, le MCC famille vaut 0,01242 en médiane et 0,00497 au q10, et le score combiné vaut 0,00124 et 0,00050 respectivement. Les réponses simulées sont échantillonnées. Ce résultat indique un risque de rappel faible quand le décodage varie. Autre piste arrêtée au développement, la distance cosinus entre trigrammes de caractères sur les mêmes prompts obtient une AUC médiane de 0,437 entre paires de la même famille, sous le seuil de poursuite de 0,60. Aucun seuil de regroupement n’a été ajusté pour cette piste.
+
 Depuis la racine du dépôt, récupérer la branche de la [PR R](https://github.com/talal95c/CISPA-Paris-/pull/4), puis pointer sur sa version testée, `09b00088616849cfa142bdce982e9360052836d1`.
 
 ```sh

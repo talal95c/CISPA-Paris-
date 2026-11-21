@@ -6,6 +6,7 @@ from pathlib import Path
 
 from duel import MIN_MATCHED_LONGS, load_replica, matched_longs, rank_pair
 from journal import load_shared, long_answers, normalize_rows
+from long_matches import partition_long_matches
 from submit_offline import DEFAULT_SHARED, predict
 
 
@@ -67,6 +68,10 @@ def main():
         for profile in ("simple", "R"):
             labels, _ = predict(rows, endpoints, slots, features, partition, config, profile, item_filter=gate)
             result[profile] = partition.score(truth, labels)
+            if profile == "simple":
+                matched_labels, edges = partition_long_matches(labels, rows, slots)
+                result["long_match"] = partition.score(truth, matched_labels)
+                result["long_match_edges"] = len(edges)
         if duels:
             labels, detail = predict(rows, endpoints, slots, features, partition, config, "simple",
                                      duels=duels, item_filter=gate)
@@ -84,7 +89,9 @@ def main():
                 orientations.append(dict(block=block, candidates=[left, right], matched=len(matched),
                                          margin_nats=margin, correct=margin is not None and margin < 0))
         results.append(result)
-    profiles = ["simple", "R", "known_duels"] if duels else ["simple", "R"]
+    profiles = ["simple", "R", "long_match"]
+    if duels:
+        profiles.append("known_duels")
     print(json.dumps({
         "split": args.split,
         "blocks": results,
