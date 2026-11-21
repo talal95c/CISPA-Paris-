@@ -178,6 +178,14 @@ free-line validity; five 135M free bursts had 100% invalid/missing items.
 Random LoRA and FP8 weight round-trip are surrogates, not production replicas.
 These optimistic simulation assumptions still do not produce a robust score.
 '''
+    if (root/'oracle_diagnostic.json').exists():
+        diagnostic=json.loads((root/'oracle_diagnostic.json').read_text())
+        r=diagnostic['R_oracle']
+        text+='\n## Diagnostic final — 135M A uniquement, aucun nouveau réglage\n\n'
+        text+=f"- R avec les quatre drapeaux oracle parfaits : médiane **{r['median']:.4f}**, q10 **{r['q10']:.4f}** (200 rejeux appariés au réglage précédent ; détecteurs statistiques désactivés pour cette ablation seulement).\n"
+        text+=f"- Tout en singletons sauf familles vraies, 135M A : score **{diagnostic['singletons']:.4f}** (MCC_family dégénéré sur une seule famille).\n"
+        text+=f"- Contrôle scoreur oracle parfait, fixture synthétique à deux familles : score **{diagnostic['perfect_oracle_two_family_fixture']:.4f}** ; oracle parfait mono-famille = 0,9000 par convention officielle.\n"
+        text+='\nLe score pondéré R passe de 0,3317 à 0,5970 avec les drapeaux parfaits, sans atteindre le plafond mono-famille de 0,9000. Les drapeaux expliquent donc une partie de la perte observée ; la couche de décision/clustering conserve une perte dans cette ablation. Aucune modification des paramètres gelés et aucune nouvelle évaluation holdout.\n'
     (root/'results_phase0.md').write_text(text)
     print(f'Wrote {root / "results_phase0.md"}')
 

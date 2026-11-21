@@ -1,0 +1,8 @@
+{
+  "R_oracle": {
+    "median": 0.596992462263972,
+    "q10": 0.32727272727272727
+  },
+  "singletons": 0.0,
+  "perfect_oracle_two_family_fixture": 1.0
+}
