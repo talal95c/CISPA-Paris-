@@ -3,8 +3,8 @@
 Usage: python cluster.py answers.jsonl [-o submission.csv] [--split-threshold 0.25] [--endpoints 33]
 
 Floor rule (plan R):
-  family : identity keywords in F1 (Qwen/Alibaba, Llama/Meta, ...); endpoints without a keyword go to the nearest
-           family by character 4-gram profile of their long answers (L*), else to the largest family. A keyword group
+  family : identity keywords in F1 (Qwen/Alibaba, Llama/Meta, ...); endpoints without a keyword use unambiguous
+           exact long-answer matches, then character 4-gram distance, else the largest group of anchors. A keyword group
            is split by F4 comma spacing when each format has >= 3 endpoints (A: no spaces, B: spaces).
            Otherwise, split when the average-linkage gap on long-answer profiles exceeds --split-threshold.
   model  : endpoints flagged as disguised (persona: F1 off-identity; system prompt: F2 leaks instructions) share the
@@ -84,6 +84,10 @@ def common_prefix(a, b):
     return sum(vals) / len(vals) if vals else None
 
 
+def long_keys(answers):
+    return {(pid, r) for pid, resp in answers.items() if pid.startswith("L") for r in resp if len(r) > 200}
+
+
 def split_two(eps, prof, thr):
     """Average-linkage agglomeration down to 2 clusters; split only if the last merge distance > thr."""
     have = [e for e in eps if prof.get(e)]
@@ -161,33 +165,47 @@ def main():
         if ident[e]:
             groups[ident[e]].append(e)
     if not groups:
-        groups["fam"] = []
-    fams = [[name, members] for name, members in sorted(groups.items())]
-
-    for e in eps:
-        if ident[e]:
-            continue
-        best = None
-        if prof[e]:
-            scored = [(sum(cos_dist(prof[e], prof[m]) for m in p if prof[m]) / max(1, sum(1 for m in p if prof[m])), i)
-                      for i, (_, p) in enumerate(fams) if any(prof[m] for m in p)]
-            best = min(scored)[1] if scored else None
-        if best is None:
-            best = max(range(len(fams)), key=lambda i: len(fams[i][1]))
-        fams[best][1].append(e)
-
-    identity_fams = fams
-    fams = []
-    for name, members in identity_fams:
+        groups["fam"] = eps
+    anchors, members_by_name, f4_parts = {}, {}, {}
+    for name, members in sorted(groups.items()):
         parts = split_f4(name, members, data, enabled=not a.no_f4_split)
         if parts is not None:
-            fams += [[f"{name}{suffix}", p] for suffix, p in zip("AB", parts)]
+            anchors[name] = members
+            f4_parts[name] = dict(zip(("compact", "spaced"), (name + "A", name + "B")))
+            members_by_name.update(zip(f4_parts[name].values(), parts))
         else:
             parts, gap = split_two(members, prof, a.split_threshold)
             print(f"{name}: {len(members)} endpoints, 2-split gap={gap if gap is None else round(gap, 3)}", file=sys.stderr)
-            fams += [[f"{name}{k + 1}" if len(parts) > 1 else name, p] for k, p in enumerate(parts)]
+            for k, p in enumerate(parts, 1):
+                label = f"{name}{k}" if len(parts) > 1 else name
+                anchors[label] = p
+                members_by_name[label] = p.copy()
 
-    family = {e: name for name, p in fams for e in p}
+    family = {e: name for name, p in members_by_name.items() for e in p}
+    exact = collections.defaultdict(set)
+    for e, label in family.items():
+        for key in long_keys(data[e]):
+            exact[key].add(label)
+    for e in eps:
+        if e in family:
+            continue
+        matches = {label for key in long_keys(data[e]) for label in exact.get(key, ())}
+        if len(matches) == 1:
+            label, = matches
+        else:
+            distances = {}
+            if prof[e]:
+                for name, refs in anchors.items():
+                    ds = [cos_dist(prof[e], prof[m]) for m in refs if prof[m]]
+                    if ds:
+                        distances[name] = sum(ds) / len(ds)
+            label = min(distances, key=distances.get) if distances else max(anchors, key=lambda n: len(anchors[n]))
+            if label in f4_parts:
+                formats = f4_parts[label]
+                label = formats.get(f4_signature(data[e])) or min(formats.values(), key=lambda n: len(members_by_name[n]))
+        family[e] = label
+        members_by_name[label].append(e)
+    fams = members_by_name.items()
     flags = {}
     for e in eps:
         why = []
@@ -214,13 +232,11 @@ def main():
             parent[find(e)] = find(flagged[0])
     seen = {}
     for e in eps:
-        for pid, resp in data[e].items():
-            for r in resp:
-                if pid.startswith("L") and len(r) > 200:
-                    o = seen.setdefault((family[e], pid, r), e)
-                    if o != e:
-                        parent[find(e)] = find(o)
-                        print(f"  duplicate {pid}: {o} = {e}", file=sys.stderr)
+        for pid, r in sorted(long_keys(data[e])):
+            o = seen.setdefault((family[e], pid, r), e)
+            if o != e:
+                parent[find(e)] = find(o)
+                print(f"  duplicate {pid}: {o} = {e}", file=sys.stderr)
 
     if a.prefix_link:
         for name, p in fams:

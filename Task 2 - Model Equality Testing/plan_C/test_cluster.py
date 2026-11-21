@@ -50,6 +50,43 @@ class ClusterTests(unittest.TestCase):
             with output.open() as handle:
                 self.assertEqual({r['family'] for r in csv.DictReader(handle)}, {'qwen'})
 
+    def test_unknown_is_assigned_against_final_anchored_long_groups(self):
+        answer = 'aaaa' * 100
+        data = {'ep-01': {'F1': ['Qwen'], 'L01': [answer]},
+                'ep-02': {'F1': ['Qwen'], 'L01': [answer + 'a']},
+                'ep-03': {'F1': ['Qwen'], 'L01': ['bbbb' * 100]},
+                'ep-04': {'F1': ['Qwen'], 'L01': ['bbbb' * 101]},
+                'ep-05': {'F1': ['Llama'], 'L01': ['aaaa' * 80 + 'bbbb' * 20]},
+                'ep-06': {'L01': [answer]},
+                'ep-07': {'L01': [answer + 'aa']}}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'submission.csv'
+            args = ['cluster.py', 'unused', '-o', str(output), '--endpoints', '7']
+            with patch('sys.argv', args), patch.object(cluster, 'load', return_value=data), contextlib.redirect_stderr(io.StringIO()):
+                cluster.main()
+            with output.open() as handle:
+                rows = {r['endpoint']: r for r in csv.DictReader(handle)}
+            self.assertNotEqual(rows['ep-01']['family'], rows['ep-03']['family'])
+            self.assertEqual(rows['ep-06']['model'], rows['ep-01']['model'])
+            self.assertEqual(rows['ep-07']['family'], rows['ep-01']['family'])
+            self.assertNotEqual(rows['ep-07']['model'], rows['ep-01']['model'])
+
+    def test_unique_exact_match_beats_average_but_not_across_prompts(self):
+        answer = 'aaaa' * 100
+        data = {'ep-01': {'F1': ['Qwen'], 'L01': [answer]},
+                'ep-02': {'F1': ['Qwen'], 'L01': ['bbbb' * 100]},
+                'ep-03': {'F1': ['Llama'], 'L01': [answer + 'cc']},
+                'ep-04': {'L01': [answer]}, 'ep-05': {'L02': [answer]}}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 'submission.csv'
+            args = ['cluster.py', 'unused', '-o', str(output), '--endpoints', '5']
+            with patch('sys.argv', args), patch.object(cluster, 'load', return_value=data), contextlib.redirect_stderr(io.StringIO()):
+                cluster.main()
+            with output.open() as handle:
+                rows = {r['endpoint']: r for r in csv.DictReader(handle)}
+            self.assertEqual(rows['ep-04']['model'], rows['ep-01']['model'])
+            self.assertEqual(rows['ep-05']['family'], 'llama')
+
 
 if __name__ == '__main__':
     unittest.main()
