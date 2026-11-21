@@ -149,6 +149,12 @@ class TeamJournalTests(unittest.TestCase):
         self.assertIsNone(identity_family(
             "I’m an AI assistant and a chatbot known as Claude Sonnet also answers questions."
         ))
+        self.assertIsNone(identity_family(
+            "I'm an AI assistant and a chatbot known as Claude trained me."
+        ))
+        self.assertIsNone(identity_family(
+            "I’m an AI assistant and a chatbot known as Claude (by Anthropic) answers that too."
+        ))
         self.assertIsNone(identity_family("I'm a bot that can explain a model known as Qwen."))
         self.assertIsNone(identity_family("I'm a bot and can explain a model known as Qwen."))
         self.assertIsNone(identity_family(

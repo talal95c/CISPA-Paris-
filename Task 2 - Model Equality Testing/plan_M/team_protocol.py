@@ -37,10 +37,10 @@ CREATOR_CLAIM = re.compile(
 )
 NEGATED = re.compile(r"\b(?:not|never|neither)\b[^,;.]*$", re.I)
 # After a coordinated claim, skip the variant name, then require the end, punctuation
-# or a connector: a bare verb would make the named model the subject of a new clause.
+# or a connector: a verb would make the named model the subject of a new clause.
 CLAIM_END = re.compile(
     r"[\w-]*(?:\.\w[\w-]*)*(?:\s+[A-Z\d][\w-]*(?:\.\w[\w-]*)*)*\**\s*"
-    r"(?:$|[.,;:!?()–—-]|(?i:and|to|with|for|designed|trained|built|created|based)\b)"
+    r"(?:$|[.,;:!?)–—-]|(?i:and|to|with|for)\b)"
 )
 MIN_SHARED_LONGS = 3
 MIN_FAMILY_GAP = 0.03
