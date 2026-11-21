@@ -23,7 +23,7 @@ ROLE_PHRASE = rf"(?:an?|the)\s+(?:(?!(?:an?|the|and|that|which|who)\b)[\w-]+\s+)
 # After "and", require a direct role so a new clause cannot claim someone else's creator.
 COORDINATED_MODIFIER = (
     r"(?:ai|artificial|intelligence|large|small|language|generative|conversational|"
-    r"virtual|digital|helpful|advanced|general-purpose|multilingual|text-based)"
+    r"virtual|digital|helpful|advanced|multilingual|[a-z]+(?:-[a-z]+)+)"
 )
 COORDINATED_ROLE = rf"(?:an?|the)\s+(?:{COORDINATED_MODIFIER}\s+)*{ROLE_NOUN}"
 SELF_ROLE = rf"{ROLE_PHRASE}(?:,?\s+and\s+{COORDINATED_ROLE})*"
