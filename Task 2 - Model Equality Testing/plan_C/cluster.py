@@ -34,7 +34,8 @@ ROLE = re.compile(r"\b(journalist|mentor|coach|tutor|chef|pirate|advisor|adviser
                   r"companion|concierge|librarian|teacher|agent named|my name is (?!qwen|llama))\b", re.I)
 LEAK = re.compile(r"\b(you are|you'll act|you will act|your (role|task|name) is|act as|always respond|you must|only use|"
                   r"do not mention|system prompt)\b", re.I)
-OWN_F2 = re.compile(r"repeat verbatim|appears before this message|forgot to include", re.I)
+OWN_F2 = re.compile(r"repeat verbatim|appears before this message|forgot to include|"
+                    r"(can(no|')t|unable to|not able to|won't) (share|reveal|disclose|repeat|provide)", re.I)
 
 
 def load(path):
@@ -175,8 +176,8 @@ def main():
         for pid, resp in data[e].items():
             for r in resp:
                 if pid.startswith("L") and len(r) > 200:
-                    o = seen.setdefault((pid, r), e)
-                    if o != e and family[o] == family[e]:
+                    o = seen.setdefault((family[e], pid, r), e)
+                    if o != e:
                         parent[find(e)] = find(o)
                         print(f"  duplicate {pid}: {o} = {e}", file=sys.stderr)
 
