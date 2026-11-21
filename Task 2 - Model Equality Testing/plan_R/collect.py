@@ -117,9 +117,8 @@ def collect(base, key, endpoints, slots, output, wave, scored):
             if slot.id.startswith("reserve-"):
                 with lock:
                     snapshot = tuple(rows.items())
-                replaced = {r["probe_id"] for (e, _), r in snapshot if e == ep and
-                            r["id"].startswith("reserve-") and (r.get("response") or "").strip()}
-                failures = [s for s in slots if not s.id.startswith("reserve-") and s.id not in replaced
+                attempted = {r["probe_id"] for (e, _), r in snapshot if e == ep and r["id"].startswith("reserve-")}
+                failures = [s for s in slots if not s.id.startswith("reserve-") and s.id not in attempted
                             and (ep, s.id) in rows and not (rows[ep, s.id].get("response") or "").strip()]
                 if failures:
                     probe = failures[0]

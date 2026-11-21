@@ -62,7 +62,7 @@ class CollectionTests(unittest.TestCase):
                     self.send_json(429, {"detail": "busy"}, retry=True)
                     return
                 used[ep] += 1
-                content = "" if ep == "ep-01" and used[ep] == 1 else "test"
+                content = "" if ep == "ep-01" and used[ep] in {1, 2, 97} else "test"
                 self.send_json(200, {"choices": [{"message": {"content": content}}], "extra": {"preserved": True},
                                      "budget": {"used": used[ep], "limit": 100}})
 
@@ -84,7 +84,12 @@ class CollectionTests(unittest.TestCase):
                 repair = next(row for row in rows if row["event"] == "answer" and row["endpoint"] == "ep-01"
                               and row["id"] == "reserve-01")
                 self.assertEqual(repair["probe_id"], "flag-01")
+                self.assertEqual(repair["response"], "")
                 self.assertEqual(repair["body"]["extra"], {"preserved": True})
+                attempts = {row["id"]: row["probe_id"] for row in rows if row["event"] == "answer"
+                            and row["endpoint"] == "ep-01" and row["id"].startswith("reserve-")}
+                self.assertEqual(attempts, {"reserve-01": "flag-01", "reserve-02": "flag-02",
+                                            "reserve-03": "reserve-03", "reserve-04": "reserve-04"})
             finally:
                 server.shutdown()
                 thread.join()
