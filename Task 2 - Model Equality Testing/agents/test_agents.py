@@ -3,11 +3,15 @@ import unittest
 from pathlib import Path
 
 import arena
+from control import control
 from check_candidate import official, audit
 from famou.evaluator import evaluate, read_expr
 
 
 class AgentsTest(unittest.TestCase):
+    def test_increasing_control_budget_keeps_previous_trials(self):
+        self.assertEqual(control(4)["attempts"], control(9)["attempts"][:4])
+
     def test_audit_refuses_missing_family_or_block(self):
         for held in (
             {},
