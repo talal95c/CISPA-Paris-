@@ -32,7 +32,9 @@ NO_CONTEXT = re.compile(r"\b(no (text|previous|prior|instructions|messages?)|the
                         r"no preceding|no earlier|start of (our|the) conversation|first message)", re.I)
 ROLE = re.compile(r"\b(journalist|mentor|coach|tutor|chef|pirate|advisor|adviser|consultant|specialist|expert|guide|"
                   r"companion|concierge|librarian|teacher|agent named|my name is (?!qwen|llama))\b", re.I)
-LEAK = re.compile(r"\b(you are|your (role|task|name) is|act as|always respond|you must|instructions?:|system prompt)\b", re.I)
+LEAK = re.compile(r"\b(you are|you'll act|you will act|your (role|task|name) is|act as|always respond|you must|only use|"
+                  r"do not mention|system prompt)\b", re.I)
+OWN_F2 = re.compile(r"repeat verbatim|appears before this message|forgot to include", re.I)
 
 
 def load(path):
@@ -68,6 +70,19 @@ def cos_dist(a, b):
     return 1 - sum(v * b.get(k, 0.0) for k, v in a.items())
 
 
+def common_prefix(a, b):
+    """Mean number of identical leading words over the long prompts both endpoints answered."""
+    vals = []
+    for pid in set(a) & set(b):
+        if pid.startswith("L") and a[pid] and b[pid]:
+            wa, wb = a[pid][0].split(), b[pid][0].split()
+            n = 0
+            while n < min(len(wa), len(wb)) and wa[n] == wb[n]:
+                n += 1
+            vals.append(n)
+    return sum(vals) / len(vals) if vals else None
+
+
 def split_two(eps, prof, thr):
     """Average-linkage agglomeration down to 2 clusters; split only if the last merge distance > thr."""
     have = [e for e in eps if prof.get(e)]
@@ -96,6 +111,9 @@ def main():
     ap.add_argument("-o", "--output", default="submission.csv")
     ap.add_argument("--split-threshold", type=float, default=0.25)
     ap.add_argument("--endpoints", type=int, default=33)
+    ap.add_argument("--prefix-link", type=int, default=0,
+                    help="merge two endpoints of a family whose long answers share >= N leading words on average "
+                         "(0 = off; risky: near-greedy plain, fp8 and LoRA 0.3 share prefixes too)")
     a = ap.parse_args()
 
     data = load(a.answers)
@@ -137,7 +155,8 @@ def main():
         elif ROLE.search(f1[e]):
             why.append("persona(F1 role)")
         f2 = " ".join(data[e].get("F2", []))
-        if f2 and LEAK.search(f2) and not NO_CONTEXT.search(f2[:200]):
+        body = re.sub(r"^\W*none\W*", "", f2.strip(), flags=re.I)
+        if body and LEAK.search(body) and not OWN_F2.search(body):
             why.append("sys(F2 leak)")
         flags[e] = why
 
@@ -160,6 +179,15 @@ def main():
                     if o != e and family[o] == family[e]:
                         parent[find(e)] = find(o)
                         print(f"  duplicate {pid}: {o} = {e}", file=sys.stderr)
+
+    if a.prefix_link:
+        for name, p in fams:
+            for i, x in enumerate(p):
+                for y in p[i + 1:]:
+                    cp = common_prefix(data[x], data[y])
+                    if cp is not None and cp >= a.prefix_link:
+                        parent[find(y)] = find(x)
+                        print(f"  prefix {x} = {y} ({cp:.0f} words)", file=sys.stderr)
 
     with open(a.output, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
