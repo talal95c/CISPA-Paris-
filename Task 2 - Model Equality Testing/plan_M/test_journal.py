@@ -105,6 +105,8 @@ class TeamJournalTests(unittest.TestCase):
         self.assertIsNone(identity_family("I was not created by Meta AI."))
         self.assertIsNone(identity_family("I'm a bot that can explain how Qwen works."))
         self.assertIsNone(identity_family("I am a model created by Meta or Alibaba."))
+        self.assertIsNone(identity_family("I am unable to disclose my identity. Qwen was developed by Alibaba Cloud."))
+        self.assertIsNone(identity_family("This AI model is known as Qwen."))
 
     def test_partial_team_journal_keeps_missing_targets_and_canonicalizes_longs(self):
         source = [dict(endpoint="ep-01", id="L1", repeat=0, prompt="fixed prompt", response="answer")]

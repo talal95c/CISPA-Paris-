@@ -17,10 +17,14 @@ FAMILY_MARKERS = {
     "Llama": re.compile(r"\b(?:llama(?=\d|\W|$)|meta (?:ai|platforms)\b|(?<=by )meta\b)", re.I),
     "Anthropic": re.compile(r"\b(?:anthropic|claude)(?=\d|\W|$)", re.I),
 }
-FIRST_PERSON = re.compile(r"\b(?:i am|i['’]m|i was|my name|known as)\b", re.I)
-CLAIM = re.compile(
-    r"\b(?:i am|i['’]m|known as|my name is|created by|developed by|trained by|built by|designed by)"
-    r"\s+(?:(?:an?|the)\s+)?\**$", re.I,
+SELF_ROLE = r"(?:an?|the)\s+(?:[\w-]+\s+){0,8}(?:model|assistant|chatbot|program|journalist|ai)"
+NAME_CLAIM = re.compile(
+    rf"\b(?:i (?:am|go by)|i['’]m|my name is)\s+(?:(?:{SELF_ROLE}\s+)?known as\s+)?"
+    r"(?:(?:an?|the)\s+)?\**$", re.I,
+)
+CREATOR_CLAIM = re.compile(
+    rf"\b(?:i am|i was|i['’]m)\s+(?:{SELF_ROLE},?\s+(?:that (?:is|was)\s+)?)?"
+    r"(?:created|developed|trained|built|designed) by\s+\**$", re.I,
 )
 NEGATED = re.compile(r"\b(?:not|never|neither)\b[^,;.]*$", re.I)
 MIN_SHARED_LONGS = 3
@@ -74,15 +78,13 @@ def team_journal(source, prompt_manifest, protocol, *, allow_partial, expected):
 def identity_family(response):
     """Use an unambiguous self-identification in the answer to F1."""
     disclosure = response[:450].strip()
-    if not FIRST_PERSON.search(disclosure):
-        return None
     mentions = {family: tuple(regex.finditer(disclosure)) for family, regex in FAMILY_MARKERS.items()}
     present = [family for family, matches in mentions.items() if matches]
     if len(present) == 1:
         family = present[0]
         for match in mentions[family]:
             before = disclosure[:match.start()]
-            if CLAIM.search(before) and not NEGATED.search(before):
+            if (NAME_CLAIM.search(before) or CREATOR_CLAIM.search(before)) and not NEGATED.search(before):
                 return family
     return None
 
