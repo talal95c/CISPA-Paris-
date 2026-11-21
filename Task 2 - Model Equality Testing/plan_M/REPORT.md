@@ -32,7 +32,9 @@ On projette les décisions plain/fp8 des cinq blocs disjoints sur deux familles 
 
 ## Contrôle de généralisation
 
-Protocole fixé avant scoring. Le troisième checkpoint est [DistilGPT2](https://huggingface.co/distilbert/distilgpt2/tree/2290a62682d06624634c1f46a6ad5be0f47f38aa). Les prompts d’exposition remplacent entièrement les histoires des premiers essais. Un bloc contient 12 prompts sur un seul sujet, distinct des sujets des 19 autres blocs. Les réponses visibles sont plafonnées à 64 tokens. Le score reste le signe du LLR W8A16 contre bf16, avec écrêtage à ±3, T=1 et top-p=1. On fixe le seuil de réplication à 17 blocs bien classés sur 20, avec une graine fixée à 3001. La probabilité binomiale d’atteindre 17/20 si la vraie précision est 0,60 vaut environ 1,6 % sous l’hypothèse d’indépendance des blocs.
+**Résultat du holdout · 18/20 (90 %), seuil pré-fixé de 17/20 franchi.** Les deux erreurs et la marge médiane de +6,57 nats indiquent un signal plus faible sur ce checkpoint que dans les pilotes. Cette réplication couvre un nouveau checkpoint et un nouveau type de prompts dans un duel simulé où une FP8 est présente et la loi de décodage est connue.
+
+Protocole fixé dans le commit `2329d33` avant scoring. Le troisième checkpoint est [DistilGPT2](https://huggingface.co/distilbert/distilgpt2/tree/2290a62682d06624634c1f46a6ad5be0f47f38aa). Les prompts explicatifs remplacent entièrement les histoires des premiers essais. Un bloc contient 12 prompts sur un seul sujet, distinct des sujets des 19 autres blocs. Les réponses visibles sont plafonnées à 64 tokens. Le score reste le signe du LLR W8A16 contre bf16, avec écrêtage à ±3, T=1 et top-p=1. On fixe le seuil de réplication à 17 blocs bien classés sur 20, avec une graine fixée à 3001. La probabilité binomiale d’atteindre 17/20 ou mieux si la vraie précision est 0,60 vaut environ 1,6 % sous l’hypothèse d’indépendance des blocs.
 
 Les poids, la grille de décodage et la règle de classement sont gelés avant l’ouverture du holdout. Si le résultat échoue, on conserve le repli C. Toute règle révisée devra être validée sur un autre checkpoint et un autre type de prompts. Pour le pipeline complet, sélectionner prompts et checkpoints sur les blocs de calibration, figer les réglages, puis mesurer le MCC global sur des blocs frais de 100 réponses. Séparer aussi les types de prompts et les familles entre calibration et test. Le score public sert au contrôle du format.
 
@@ -48,6 +50,9 @@ python run_fp8_gate.py --model /chemin/tinystories-1m --visible-text --seed 1013
 python run_fp8_gate.py --model /chemin/pythia-14m --visible-text --seed 1009 \
   --blocks 5 --prompts 30 --tokens 256 --threads 2 --batch-size 24 --output pythia.json
 python score_replays.py tiny.json pythia.json
+python run_fp8_gate.py --model /chemin/distilgpt2 --prompt-family expository \
+  --visible-text --seed 3001 --blocks 20 --prompts 12 --tokens 64 \
+  --threads 6 --batch-size 24 --output holdout.json
 python score_text.py --model /chemin/checkpoint --pairs duels.jsonl
 ```
 
