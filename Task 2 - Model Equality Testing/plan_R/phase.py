@@ -11,13 +11,17 @@ from features import canonical_choice, char_signature, complete_format, cosine, 
 from simulate import phase_slots, replay_slots
 
 
+def phase_probe(row):
+    return row.get("max_new_tokens", 0), row["id"]
+
+
 def panel(rows, slots):
     ids = {s.id: s for s in slots}
     result = defaultdict(dict)
     for row in rows:
         slot = ids[row["id"]]
         parsed = parse_burst(row["response"], slot.items)
-        result[slot.id][row["repeat"]] = [
+        result[phase_probe(row)][row["repeat"]] = [
             canonical_choice(item, parsed[item.tag]) if item.tag in parsed else np.nan for item in slot.items
         ]
     return {pid: np.asarray([values[k] for k in sorted(values)], dtype=float) for pid, values in result.items()}
@@ -53,7 +57,7 @@ def null_baseline(panels):
 def free_text_null(rows):
     by_prompt = defaultdict(dict)
     for row in rows:
-        by_prompt[row["id"]][row["repeat"]] = normalize(char_signature(row["response"]))
+        by_prompt[phase_probe(row)][row["repeat"]] = normalize(char_signature(row["response"]))
     differences = []
     for choices in by_prompt.values():
         for rep in sorted(choices):
@@ -124,13 +128,16 @@ def phase(rows, size):
         if isinstance(block, int):
             replay_runs[row.get("heldout", False), block].append(row)
         else:
-            phase_runs[block][row["endpoint"], row["id"], row["repeat"]] = row
+            request = phase_probe(row), row["endpoint"], row["repeat"]
+            previous = phase_runs[block].setdefault(request, row)
+            if previous["response"] != row["response"]:
+                raise ValueError(f"conflicting Phase 0 answers for {block} request {request}")
     result = {}
     for size_phase in (20, 12):
         slots = phase_slots(size=size_phase)
         by_id = {s.id: s for s in slots}
         data = defaultdict(list)
-        for row in phase_runs[f"phase{size_phase}"].values():
+        for _, row in sorted(phase_runs[f"phase{size_phase}"].items()):
             data[row["variant"]].append(row)
         plain = panel(data["plain"], slots)
         marked = panel(data["watermark"], slots)
@@ -141,11 +148,11 @@ def phase(rows, size):
         parsed_rate = [float(np.isfinite(a).mean()) for a in plain.values()]
         exact_pairs = {}
         for variant in ("plain", "greedy"):
-            by_prompt = defaultdict(list)
+            by_prompt = defaultdict(dict)
             for r in data[variant]:
-                by_prompt[r["id"]].append(r["response"].strip())
-            exact_pairs[variant] = [bool(a and a == b) for choices in by_prompt.values()
-                                    for a, b in zip(choices[::2], choices[1::2])]
+                by_prompt[phase_probe(r)][r["repeat"]] = r["response"].strip()
+            exact_pairs[variant] = [bool(text and text == choices[rep+1]) for choices in by_prompt.values()
+                                    for rep, text in choices.items() if rep % 2 == 0 and rep+1 in choices]
         baseline = null_baseline(plain)
         text_null = free_text_null(data["plain"])
         greedy_identity = (bool(exact_pairs["greedy"]) and bool(exact_pairs["plain"]) and
@@ -196,7 +203,8 @@ def main():
         parser.error("all journals must start with the simulation header")
     if any(journal[0]["items"] != journals[0][0]["items"] for journal in journals):
         parser.error("journals must share the replay item count")
-    rows = [dict(row, heldout=journal[0].get("heldout", False)) for journal in journals for row in journal[1:]]
+    rows = [dict(row, heldout=journal[0].get("heldout", False), max_new_tokens=journal[0].get("max_new_tokens", 0))
+            for journal in journals for row in journal[1:]]
     result = phase(rows, journals[0][0]["items"])
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

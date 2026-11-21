@@ -120,6 +120,40 @@ class AnalysisTests(unittest.TestCase):
         result = phase([first, duplicate, second], 20)["20"]
         self.assertEqual(result["B2"]["n"], 2)
         self.assertEqual(result["B2prime"]["plain"], {"n": 1, "identical": 0})
+        with self.assertRaisesRegex(ValueError, "conflicting Phase 0 answers"):
+            phase([first, dict(second, repeat=rep)], 20)
+
+    def test_phase_keeps_different_token_limits_regardless_of_journal_order(self):
+        block, slot, _ = next(phase_jobs("plain", 2))
+        complete = ["\n".join(f"{item.tag} {pick}" for item in slot.items) for pick in "AB"]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            journals = []
+            for limit, answers in ((96, [complete[0], complete[0]]), (256, complete)):
+                rows = [{"event": "simulation", "items": 20, "max_new_tokens": limit}]
+                for endpoint, variant, responses in (
+                    ("ref-01", "plain", answers),
+                    ("ref-06", "system", [complete[0] if limit == 256 else "truncated"]),
+                ):
+                    rows.extend({"event": "answer", "endpoint": endpoint, "block": block, "id": slot.id,
+                                 "variant": variant, "repeat": rep, "response": response}
+                                for rep, response in enumerate(responses))
+                journal = root / f"{limit}.jsonl"
+                journal.write_text("\n".join(map(json.dumps, rows)))
+                journals.append(str(journal))
+            output = root / "phase.json"
+            results = []
+            for order in (journals, journals[::-1]):
+                with patch("sys.argv", ["phase.py", *order, "--output", str(output)]), redirect_stdout(io.StringIO()):
+                    phase_main()
+                results.append(json.loads(output.read_text()))
+        self.assertEqual(results[0], results[1])
+        result = results[0]["20"]
+        self.assertEqual(result["B2"]["n"], 4)
+        self.assertEqual(result["B2"]["comparisons_with_items"], 2)
+        self.assertEqual(result["B2prime"]["plain"], {"n": 2, "identical": 1})
+        self.assertEqual(result["B3"]["off_format_n"]["system"], 2)
+        self.assertEqual(result["B3"]["off_format"]["system"], .5)
 
     def test_exact_budget_and_stable_holdout(self):
         slots = replay_slots(3)
