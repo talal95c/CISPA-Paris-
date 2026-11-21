@@ -1,5 +1,11 @@
 # Local Plan C simulator
 
+Step 2 decision pipeline and frozen evaluation: **[results_phase0.md](results_phase0.md)**.
+`decision.py` contains text ingestion, unbiased U statistics, clustering and R/C;
+`infer.py` runs it on local `answers.jsonl` plus a prompt manifest. Calibration
+and evaluation are in `phase0.py`; the committed `frozen_params.json` must not
+be retuned using the reported holdout results. Current verdict: **NO-GO**.
+
 No competition endpoint is contacted. Only public Hugging Face model downloads
 are used. Official files in `~/me` were read, not imported or executed.
 
