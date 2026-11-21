@@ -9,16 +9,15 @@ from unittest.mock import Mock
 
 import numpy as np
 
-from calibrate_refs import fit_refs
 from collect import TASK_PATH, completion, request
 from features import DEFAULTS, clipped_llr, dispersion, flag_features, parse_burst, signatures
 from partition import confusion, family_proposals, mcc, optimize_joint, pairs, rule, score
 from phase import effectiveness, free_text_null, watermark_gate
-from protocol import fingerprint, manifest
+from protocol import manifest
 from replay import check_budget, holdout
 from simulate import VARIANTS, replay_slots
 from simulate_server import make_handler
-from submit import write_csv
+from submit import FROZEN_CONFIG, write_csv
 
 
 class AnalysisTests(unittest.TestCase):
@@ -119,25 +118,12 @@ class AnalysisTests(unittest.TestCase):
                 server.shutdown()
                 thread.join()
 
-    def test_optional_reference_calibration_uses_official_labels(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "answers.jsonl"
-            endpoints = [f"ref-{i+1:02d}" for i in range(len(VARIANTS))]
-            truth = {ep: ("P", "S" if i < 5 else f"T{i}") for i, ep in enumerate(endpoints)}
-            official = Path(tmp) / "practice.csv"
-            write_csv(official, truth)
-            rows = [{"scored": False, "sha256": fingerprint(manifest())}]
-            rows += [{"event": "answer", "endpoint": ep, "id": "long-01", "response": ep}
-                     for ep in endpoints]
-            path.write_text("\n".join(json.dumps(r) for r in rows))
-            calibration = fit_refs([path], official, 20)
-            self.assertEqual(calibration["reference_journals"], 1)
-            self.assertFalse(calibration["settings"]["strong_flags"])
-            self.assertEqual(calibration["params"]["family"], tuple_to_lists(DEFAULTS["family"]))
-
-
-def tuple_to_lists(rows):
-    return tuple(list(row) for row in rows)
+    def test_frozen_families_and_full_prompt_splits_are_disjoint(self):
+        cfg = json.loads(FROZEN_CONFIG.read_text())
+        self.assertTrue(set(cfg["development_families"]).isdisjoint(cfg["heldout_families"]))
+        dev, test = ({slot.prompt for block in range(cfg["blocks"]) for slot in replay_slots(block, 20, heldout)}
+                     for heldout in (False, True))
+        self.assertTrue(dev.isdisjoint(test))
 
 
 if __name__ == "__main__":

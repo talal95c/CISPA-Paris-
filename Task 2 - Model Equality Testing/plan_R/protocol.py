@@ -95,10 +95,10 @@ def burst(id, rng, size, repeat_items=(), allowed_types=range(len(TYPES))):
     return Slot(id, "burst", 2, prompt, items)
 
 
-def manifest(seed=22026, size=20):
+def manifest(seed=22026, size=20, flags=None, longs=None):
     rng = random.Random(seed)
-    flags = [Slot(f"flag-{n+1:02d}", "flag", 1, p) for n, p in enumerate(FLAGS)]
-    longs = [Slot(f"long-{n+1:02d}", "long", 1 if n < 10 else 2, p) for n, p in enumerate(LONGS)]
+    flags = [Slot(f"flag-{n+1:02d}", "flag", 1, p) for n, p in enumerate(FLAGS if flags is None else flags)]
+    longs = [Slot(f"long-{n+1:02d}", "long", 1 if n < 10 else 2, p) for n, p in enumerate(LONGS if longs is None else longs)]
     bursts = [burst(f"burst-{n+1:02d}", rng, size) for n in range(60)]
     bursts.extend(burst(f"burst-{n+61:02d}", rng, size, bursts[n].items) for n in range(2))
     reserves = [burst(f"reserve-{n+1:02d}", rng, size) for n in range(4)]

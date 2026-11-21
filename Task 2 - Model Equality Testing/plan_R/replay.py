@@ -10,12 +10,11 @@ from pathlib import Path
 
 import numpy as np
 
-from features import fit_gaussians, pair_features, read_rows, signatures
+from features import read_rows, signatures
 from partition import infer, score
-from phase import temperature_result
 from protocol import TYPES
 from simulate import VARIANTS, replay_slots
-from submit import write_csv
+from submit import FROZEN_CONFIG, write_csv
 
 
 REMAINING_ITEMS = [f"{i}:{a}/{b}" for i, (_, options) in enumerate(TYPES[:-1])
@@ -28,10 +27,13 @@ def holdout(item):
     return item.type == len(TYPES)-1 or item.key in ITEM_HOLDOUT
 
 
-def load_blocks(paths):
+def load_blocks(paths, heldout=False):
     by_block = defaultdict(list)
     for path in paths:
-        for row in read_rows(path)[1:]:
+        rows = read_rows(path)
+        if not rows or bool(rows[0].get("heldout")) != heldout:
+            raise ValueError(f"{path}: wrong prompt split")
+        for row in rows[1:]:
             if row.get("event") == "answer" and isinstance(row["block"], int):
                 by_block[row["block"]].append(row)
     return by_block
@@ -53,46 +55,6 @@ def check_budget(data, slots):
         raise ValueError("replay diverges from its frozen collection manifest")
 
 
-def train(training, phase, leave_out=None):
-    samples = {"family": [], "model": []}
-    flag_counts, flag_totals = Counter(), Counter()
-    distances = {key: defaultdict(list) for key in ("disagreement", "shape")}
-    for block, sigs, truth in training:
-        sigs = {ep: sig for ep, sig in sigs.items() if truth[ep][1] != leave_out}
-        for (a, b), values in pair_features(sigs).items():
-            fa, ma = truth[a][0]
-            fb, mb = truth[b][0]
-            samples["family"].append((values, fa == fb))
-            if fa == fb:
-                samples["model"].append((values, ma == mb))
-        for ep, sig in sigs.items():
-            name = truth[ep][1]
-            flag_counts[name] += sig.flags["strength"] >= 1.5
-            flag_totals[name] += 1
-            for stat, results in distances.items():
-                diff = sig.repeat[stat]
-                if diff is not None and (stat == "shape" or sig.repeat["matched"] >= 4):
-                    results[name].append((block, diff))
-    flag_rates = {variant: flag_counts[variant]/count for variant, count in sorted(flag_totals.items())}
-    strong_flags = (all(flag_rates.get(n, 0) >= .90 for n in ("system", "persona")) and
-                    all(flag_rates.get(n, 1) <= .05 for n in ("fp8", "lora03", "lora07", "lora15") if n != leave_out))
-    b3_pass = any(phase.get(size, {}).get("B3", {}).get("verdict") == "go" for size in ("20", "12"))
-    strong_temp = b3_pass and temperature_result(distances["disagreement"])["verdict"] == "go"
-    temp_stat = "disagreement" if strong_temp else "shape"
-    values = distances[temp_stat]
-    baseline = [x for n in ("plain", "system", "persona", "watermark") for _, x in values[n]]
-    together = [x for _, x in values["temp"]]
-    threshold = None
-    if together and baseline:
-        if strong_temp:
-            threshold = (float(np.median(together)) + float(np.median(baseline))) / 2
-        elif float(np.median(together)) > float(np.median(baseline)):
-            threshold = float(np.quantile(baseline, .9))
-    settings = {"strong_flags": strong_flags, "strong_temp": strong_temp, "temp_stat": temp_stat,
-                "temp_threshold": threshold, "burst_weight": 0.65 if b3_pass else 0.15}
-    return {task: fit_gaussians(examples, task) for task, examples in samples.items()}, settings, flag_rates
-
-
 def summary(data):
     return {key: {"median": float(np.median([r[key] for r in data])),
                   "q10": float(np.quantile([r[key] for r in data], .10)),
@@ -100,62 +62,98 @@ def summary(data):
             for key in ("family", "model", "total")}
 
 
-def evaluate(blocks, size, phase):
-    if len(blocks) < 5:
-        raise ValueError("need at least five disjoint complete replay blocks")
-    train_sigs, test_sigs, truth = {}, {}, {}
+def prepare(blocks, config, heldout):
+    if len(blocks) != config["blocks"]:
+        raise ValueError("wrong number of disjoint complete replay blocks")
+    sigs, truth, prompts = {}, {}, set()
+    families = set(config["heldout_families" if heldout else "development_families"])
     for block, data in sorted(blocks.items()):
-        slots = replay_slots(block, size)
+        slots = replay_slots(block, config["items"], heldout)
         check_budget(data, slots)
+        if set(r["family"] for r in data) != families:
+            raise ValueError(f"block {block} contains families outside the frozen split")
+        prompts.update(s.prompt for s in slots)
         truth[block] = truth_rows(data)
-        train_sigs[block] = signatures(data, slots, item_filter=lambda item: not holdout(item))
-        test_sigs[block] = signatures(data, slots, item_filter=holdout)
-        if set(test_sigs[block]) != set(truth[block]):
+        sigs[block] = signatures(data, slots, item_filter=lambda item: holdout(item) == heldout)
+        if set(sigs[block]) != set(truth[block]):
             raise ValueError(f"block {block} contains endpoint(s) with no usable text")
-    baseline, noisy, ablations, predictions = [], [], defaultdict(list), {}
-    exclusions = tuple(v for v in VARIANTS if v != "plain")
-    for block, test in sorted(test_sigs.items()):
-        training = [(b, sigs, truth[b]) for b, sigs in train_sigs.items() if b != block]
-        params, settings, flag_rates = train(training, phase)
+    return sigs, truth, prompts
+
+
+def evaluate(prepared, config, profile, flag_rates=None):
+    signatures_by_block, truth, _ = prepared
+    baseline, noisy, ablations, folds, predictions = [], [], defaultdict(list), defaultdict(list), {}
+    params, settings = config["params"], config["profiles"][profile]
+    for block, test in sorted(signatures_by_block.items()):
         labels, _ = infer(test, params, settings)
         predictions[block] = labels
         expected = {e: label for e, (label, _) in truth[block].items()}
         baseline.append(score(expected, labels))
-        rng = random.Random(163 + block)
-        disturbed = {}
-        for ep, sig in sorted(test.items()):
-            variant = truth[block][ep][1]
-            triggered = rng.random() < flag_rates.get(variant, 0)
-            flags = dict(sig.flags, strength=(max(1.8, sig.flags["strength"]) if triggered else 0.0))
-            disturbed[ep] = replace(sig, flags=flags)
-        noisy.append(score(expected, infer(disturbed, params, settings)[0]))
-        for variant in exclusions:
-            keep = {e: sig for e, sig in test.items() if truth[block][e][1] != variant}
-            reduced = {e: expected[e] for e in keep}
-            params_abl, settings_abl, _ = train(training, phase, leave_out=variant)
-            ablations[variant].append(score(reduced, infer(keep, params_abl, settings_abl)[0]))
+        if flag_rates is not None:
+            rng = random.Random(163 + block)
+            disturbed = {}
+            for ep, sig in sorted(test.items()):
+                variant = truth[block][ep][1]
+                triggered = rng.random() < flag_rates.get(variant, 0)
+                flags = dict(sig.flags, strength=(max(1.8, sig.flags["strength"]) if triggered else 0.0))
+                disturbed[ep] = replace(sig, flags=flags)
+            noisy.append(score(expected, infer(disturbed, params, settings)[0]))
+            for variant in (v for v in VARIANTS if v != "plain"):
+                keep = {e: sig for e, sig in test.items() if truth[block][e][1] != variant}
+                ablations[variant].append(score({e: expected[e] for e in keep}, infer(keep, params, settings)[0]))
+            for family in config["heldout_families"]:
+                keep = {e: sig for e, sig in test.items() if expected[e][0] == family}
+                folds[family].append(score({e: expected[e] for e in keep}, infer(keep, params, settings)[0]))
     aggregate = summary(baseline)
     good = aggregate["total"]["median"] >= .8 and aggregate["total"]["q10"] >= .6
     return {"n_blocks": len(baseline), "slots_per_endpoint": 100, "blocks": baseline,
-            "summary": aggregate, "noisy_flags": summary(noisy), "noisy_flags_blocks": noisy,
+            "summary": aggregate, "noisy_flags": summary(noisy) if noisy else None,
+            "leave_one_family_out_model": {k: summary(v)["model"] for k, v in folds.items()},
             "leave_one_variant_out": {k: summary(v)["total"] for k, v in ablations.items()},
             "gate_C": "go" if good else "no-go"}, predictions
 
 
+def measure_flag_rates(prepared):
+    sigs, truth, _ = prepared
+    hits, totals = Counter(), Counter()
+    for block, signatures_by_endpoint in sigs.items():
+        for endpoint, signature in signatures_by_endpoint.items():
+            variant = truth[block][endpoint][1]
+            totals[variant] += 1
+            hits[variant] += signature.flags["strength"] >= 1.5
+    return {k: hits[k]/n for k, n in totals.items()}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("journals", nargs="+", type=Path)
-    parser.add_argument("--items", type=int, default=20)
-    parser.add_argument("--phase", type=Path)
+    parser.add_argument("--development", nargs="+", type=Path, required=True)
+    parser.add_argument("--holdout", nargs="+", type=Path, required=True)
+    parser.add_argument("--config", type=Path, default=FROZEN_CONFIG)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--practice-output", type=Path)
     args = parser.parse_args()
-    phase = json.loads(args.phase.read_text()) if args.phase else {}
-    result, predictions = evaluate(load_blocks(args.journals), args.items, phase)
+    raw = args.config.read_bytes()
+    config = json.loads(raw)
+    if set(config["development_families"]) & set(config["heldout_families"]):
+        parser.error("development and holdout families must be disjoint")
+    if set(args.development) & set(args.holdout):
+        parser.error("journal splits must be disjoint")
+    dev = prepare(load_blocks(args.development), config, False)
+    held = prepare(load_blocks(args.holdout, heldout=True), config, True)
+    if dev[2] & held[2]:
+        parser.error("exact prompts overlap between development and holdout")
+    rates = measure_flag_rates(dev)
+    result = {"config_sha256": hashlib.sha256(raw).hexdigest(), "profiles": {}}
+    for profile in ("R", "simple"):
+        development, predictions = evaluate(dev, config, profile)
+        holdout_results, _ = evaluate(held, config, profile, rates)
+        gap = development["summary"]["total"]["median"] - holdout_results["summary"]["total"]["median"]
+        result["profiles"][profile] = {"development": development, "holdout": holdout_results, "gap": gap}
+        if profile == "R" and args.practice_output:
+            first = predictions[min(predictions)]
+            write_csv(args.practice_output, {e: label for e, label in first.items() if e.startswith("ref-")})
+    result["recommendation"] = ("simple" if abs(result["profiles"]["R"]["gap"]) >= config["gap_threshold"] else "R")
     args.output.write_text(json.dumps(result, indent=2) + "\n")
-    if args.practice_output:
-        first = predictions[min(predictions)]
-        write_csv(args.practice_output, {e: label for e, label in first.items() if e.startswith("ref-")})
     print(json.dumps(result, indent=2))
 
 

@@ -74,13 +74,16 @@ def flag_features(texts):
     return {"identity": identity, "leak": leaked, "format": off_format, "strength": strength}
 
 
-def dispersion(text_pairs):
+def dispersion(text_pairs, restrict_shape=False):
     differences, exact, shape = [], [], []
     for (first, second, items) in text_pairs:
+        a, b = parse_burst(first, items), parse_burst(second, items)
+        if restrict_shape:
+            first = "\n".join(f"{item.tag} {'AB'[a[item.tag]]}" for item in items if item.tag in a)
+            second = "\n".join(f"{item.tag} {'AB'[b[item.tag]]}" for item in items if item.tag in b)
         if first and second:
             exact.append(first.strip() == second.strip())
             shape.append(1 - cosine(normalize(char_signature(first)), normalize(char_signature(second))))
-        a, b = parse_burst(first, items), parse_burst(second, items)
         differences.extend(a[tag] != b[tag] for tag in a.keys() & b.keys())
     return {"greedy": bool(len(exact) >= 2 and all(exact)),
             "disagreement": float(np.mean(differences)) if differences else None,
@@ -141,7 +144,7 @@ def signatures(rows, slots=None, item_filter=None):
              tuple(item for item in slots[f"burst-{i:02d}"].items if item_filter is None or item_filter(item)))
             for i in (1, 2)
         ]
-        repeat = dispersion(pairs)
+        repeat = dispersion(pairs, restrict_shape=item_filter is not None)
         odds, c = adjusted_odds(counts, repeat["greedy"])
         output[endpoint] = Signature(
             flag_features(texts), {k: normalize(v) for k, v in long_counts.items()}, normalize(merged),
@@ -171,20 +174,6 @@ DEFAULTS = {
     "family": ((0.26, 0.60, 0.8), (0.55, 0.82, 1.4), (0.13, 0.15, 0.65)),
     "model": ((0.26, 0.60, 0.75), (0.36, 0.70, 1.05), (0.17, 0.19, 0.6)),
 }
-
-
-def fit_gaussians(examples, task):
-    a, b, sigma = (list(x) for x in DEFAULTS[task])
-    for col in range(len(a)):
-        groups = [[row[col] for row, same in examples if same == label and row[col] is not None]
-                  for label in (True, False)]
-        if min(map(len, groups)) < 3:
-            continue
-        a[col] = float((sum(groups[0]) + 4*a[col]) / (len(groups[0]) + 4))
-        b[col] = float((sum(groups[1]) + 4*b[col]) / (len(groups[1]) + 4))
-        ss = sum(sum((np.asarray(g) - m) ** 2) for g, m in zip(groups, (a[col], b[col])))
-        sigma[col] = float(np.sqrt((ss + 8*sigma[col]**2) / (8 + sum(map(len, groups)))))
-    return a, b, sigma
 
 
 def clipped_llr(values, params, weights=(0.65, 0.35, 1.0)):
