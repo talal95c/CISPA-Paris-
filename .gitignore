@@ -1,1 +1,8 @@
 ./DS_Store
+
+/Task 1 - Watermark Localization/train.zip
+/Task 1 - Watermark Localization/test.zip
+/Task 2 - Model Equality Testing/practice_answers.csv
+/Task 3 - Unlearning/forget_images.npz
+/Task 3 - Unlearning/model.pt
+/.download-*
