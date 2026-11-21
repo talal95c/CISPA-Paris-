@@ -26,7 +26,7 @@ COORDINATED_MODIFIER = (
     r"virtual|digital|helpful|advanced|multilingual|[a-z]+(?:-[a-z]+)+)"
 )
 COORDINATED_ROLE = rf"(?:an?|the)\s+(?:{COORDINATED_MODIFIER}\s+)*{ROLE_NOUN}"
-SELF_ROLE = rf"{ROLE_PHRASE}(?:,?\s+and\s+{COORDINATED_ROLE})*"
+SELF_ROLE = rf"{ROLE_PHRASE}(?P<coordinated>(?:,?\s+and\s+{COORDINATED_ROLE})+)?"
 NAME_CLAIM = re.compile(
     rf"\b(?:i (?:am|go by)|i['’]m|my name is)\s+(?:(?:{SELF_ROLE},?\s+)?known as\s+)?"
     r"(?:(?:an?|the)\s+)?\**$", re.I,
@@ -36,6 +36,8 @@ CREATOR_CLAIM = re.compile(
     r"(?:created|developed|trained|built|designed) by\s+\**$", re.I,
 )
 NEGATED = re.compile(r"\b(?:not|never|neither)\b[^,;.]*$", re.I)
+# End the coordinated identity there, before it can become the subject of a new clause.
+CLAIM_END = re.compile(r"(?:\d+(?:\.\d+)*[a-z]?)?\**\s*(?:[.!?]\**(?=\s|$)|$)", re.I)
 MIN_SHARED_LONGS = 3
 MIN_FAMILY_GAP = 0.03
 
@@ -86,15 +88,18 @@ def team_journal(source, prompt_manifest, protocol, *, allow_partial, expected):
 
 def identity_family(response):
     """Use an unambiguous self-identification in the answer to F1."""
-    disclosure = response[:450].strip()
-    mentions = {family: tuple(regex.finditer(disclosure)) for family, regex in FAMILY_MARKERS.items()}
+    disclosure = response.lstrip()
+    opening = disclosure[:450]
+    mentions = {family: tuple(regex.finditer(opening)) for family, regex in FAMILY_MARKERS.items()}
     present = [family for family, matches in mentions.items() if matches]
     if len(present) == 1:
         family = present[0]
         for match in mentions[family]:
             before = disclosure[:match.start()]
-            if (NAME_CLAIM.search(before) or CREATOR_CLAIM.search(before)) and not NEGATED.search(before):
-                return family
+            claim = NAME_CLAIM.search(before) or CREATOR_CLAIM.search(before)
+            if claim and not NEGATED.search(before):
+                if not claim["coordinated"] or CLAIM_END.match(disclosure, match.end()):
+                    return family
     return None
 
 

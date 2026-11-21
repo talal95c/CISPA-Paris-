@@ -142,6 +142,12 @@ class TeamJournalTests(unittest.TestCase):
         self.assertIsNone(identity_family(
             "I’m an AI assistant and the platform offers an open-source chatbot developed by Anthropic."
         ))
+        self.assertIsNone(identity_family(
+            "I’m an AI assistant and an open-source chatbot developed by Anthropic can answer that too."
+        ))
+        self.assertIsNone(identity_family(
+            "I’m an assistant and a language model known as Qwen also answers questions."
+        ))
 
     def test_identity_needs_attribution_and_abstains_on_conflict(self):
         self.assertEqual(identity_family("I am a model developed by Meta AI."), "Llama")
