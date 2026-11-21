@@ -26,19 +26,31 @@ def main():
     if args.threads < 1:
         parser.error("Threads must be positive")
     rows = []
+    dropped_pairs = 0
     with args.pairs.open(encoding="utf-8") as stream:
         for line_number, line in enumerate(stream, 1):
             if not line.strip():
                 continue
             row = json.loads(line)
             if not isinstance(row, dict) or any(
-                not isinstance(row.get(field), str) or not row[field]
+                not isinstance(row.get(field), str)
                 for field in ("prompt", "left", "right")
             ):
-                parser.error(f"Line {line_number} must have nonempty prompt, left and right text")
+                parser.error(f"Line {line_number} must have prompt, left and right strings")
+            if not row["prompt"]:
+                parser.error(f"Line {line_number} must have a nonempty prompt")
+            if not row["left"] or not row["right"]:
+                dropped_pairs += 1
+                continue
             rows.append(row)
     if not rows:
-        parser.error("Provide at least one matched pair")
+        print(json.dumps({
+            "paired_llr_nats": None,
+            "null_pvalue": None,
+            "margins_nats": [],
+            "dropped_pairs": dropped_pairs,
+        }, indent=2))
+        return
     torch.set_num_threads(args.threads)
     tokenizer = AutoTokenizer.from_pretrained(args.model, local_files_only=True)
     checkpoint = AutoModelForCausalLM.from_pretrained(args.model, local_files_only=True)
@@ -56,6 +68,7 @@ def main():
         "paired_llr_nats": sum(margins),
         "null_pvalue": paired_null_pvalue(list(by_prompt.values())),
         "margins_nats": margins,
+        "dropped_pairs": dropped_pairs,
     }, indent=2))
 
 

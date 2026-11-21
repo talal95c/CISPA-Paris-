@@ -45,6 +45,6 @@ python score_replays.py tiny.json pythia.json
 python score_text.py --model /chemin/checkpoint --pairs duels.jsonl
 ```
 
-Chaque ligne de `duels.jsonl` contient les chaînes `prompt`, `left` et `right`. Un LLR positif favorise la réplique fp8 à gauche. L'appelant conserve les mêmes prompts et le même décodage pour les deux candidats. En présence d'un template de chat, reproduire le prompt effectivement tokenisé, y compris le séparateur avant la réponse. C conserve son repli si le checkpoint ou le duel est incertain.
+Chaque ligne de `duels.jsonl` contient les chaînes `prompt`, `left` et `right`. Un LLR positif favorise la réplique fp8 à gauche. Le CLI écarte les paires avec une réponse vide et indique leur nombre. Si toutes les paires sont écartées, le score vaut `null`. L'appelant conserve les mêmes prompts et le même décodage pour les deux candidats. En présence d'un template de chat, reproduire le prompt tokenisé, avec le séparateur avant la réponse. C conserve son repli si le checkpoint ou le duel est incertain.
 
 Pour la collecte notée ultérieure, utiliser le collecteur commun de C/R et conserver les 30 longues du protocole partagé dans le journal. Cette branche réemploie leurs réponses pour produire le score hors ligne.
