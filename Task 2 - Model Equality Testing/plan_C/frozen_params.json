@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "seed": 20261121,
+  "tuning_family": "135m",
+  "tuning_split": "A without type 5",
+  "held_type": 5,
+  "active_items": 60,
+  "probe_items": 22,
+  "bursts": 62,
+  "width": 22,
+  "primary_bursts": 46,
+  "code_bursts": 16,
+  "null_mean": 0.0003839107916402153,
+  "null_sd": 0.00520070228430928,
+  "null_q95": 0.009306213764997953,
+  "pool_threshold": 0.007056563863173591,
+  "family_threshold": 0.13187860504298402,
+  "watermark_threshold": 0.07966772502859458,
+  "temperature_threshold": 0.02340812814683664,
+  "enable_watermark": false,
+  "enable_temperature": true,
+  "enable_axis": false,
+  "enable_ranking": false,
+  "rank_stat": "distance",
+  "rank_precision2": 0.495,
+  "rank_precision3": 0.46,
+  "noisy_flags_enabled": {
+    "0.7": false,
+    "0.9": true
+  },
+  "calibration_replays": 200,
+  "pilot": {
+    "60": {
+      "null_mean": -0.00026042971919349546,
+      "null_sd": 0.004831205773756385,
+      "strong_z": 2.7396728747230297,
+      "fp8_z": 2.09751243588148,
+      "strong_power": 0.6666666666666666
+    },
+    "125": {
+      "null_mean": 0.001961103452274152,
+      "null_sd": 0.007420767277393417,
+      "strong_z": 1.3438358517395246,
+      "fp8_z": 1.2254040947647298,
+      "strong_power": 0.31666666666666665
+    }
+  }
+}
