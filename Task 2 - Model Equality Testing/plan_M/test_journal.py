@@ -150,6 +150,24 @@ class TeamJournalTests(unittest.TestCase):
         boilerplate = {"long-1": "A" * 140, "long-2": "A" * 140}
         self.assertEqual(prompt_matches(boilerplate, boilerplate, slots), [("long-1", "exact")])
 
+    def test_one_endpoint_repeating_output_cannot_supply_a_second_match(self):
+        slots = {"long-1": slot("long-1", "first"), "long-2": slot("long-2", "second")}
+        common = "A" * 140
+        left = {"long-1": common + " continued", "long-2": common + " continued"}
+        right = {"long-1": common + " continued", "long-2": common}
+        self.assertEqual(prompt_matches(left, right, slots), [("long-1", "exact")])
+        self.assertEqual(prompt_matches(right, left, slots), [("long-1", "exact")])
+        # Both endpoints vary their replies, but the shared prefix is the same.
+        left["long-1"] = common
+        right["long-1"] = common + " followed"
+        self.assertEqual(prompt_matches(left, right, slots), [("long-1", "prefix")])
+
+    def test_duplicate_prompt_uses_an_alternative_when_first_match_repeats(self):
+        slots = {f"long-{i}": slot(f"long-{i}", prompt)
+                 for i, prompt in enumerate(["first", "second", "first"], 1)}
+        answers = {"long-1": "A" * 140, "long-2": "A" * 140, "long-3": "B" * 140}
+        self.assertEqual(prompt_matches(answers, answers, slots), [("long-2", "exact"), ("long-3", "exact")])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -6,28 +6,30 @@ from itertools import combinations
 from journal import long_answers
 
 
-MIN_MATCHED_PROMPTS = 2
 MIN_EXACT_CHARS = 64
 MIN_PREFIX_CHARS = 128
 
 
 def prompt_matches(left, right, slots):
-    evidence = {}
-    seen_text = set()
+    """Return a witness for two independent matches, or the first match alone."""
+    candidates = []
     for pid in sorted(left.keys() & right.keys()):
         a, b = (text.replace("\r\n", "\n").strip() for text in (left[pid], right[pid]))
         short, long = sorted((a, b), key=len)
-        prompt = slots[pid].prompt
-        if short in seen_text or prompt in evidence:
-            continue
         if a == b and len(short) >= MIN_EXACT_CHARS:
-            evidence[prompt] = (pid, "exact")
+            kind = "exact"
         elif a != b and len(short) >= MIN_PREFIX_CHARS and long.startswith(short):
-            evidence[prompt] = (pid, "prefix")
+            kind = "prefix"
         else:
             continue
-        seen_text.add(short)
-    return list(evidence.values())
+        candidates.append(((slots[pid].prompt, a, b, short), (pid, kind)))
+
+    # Both prompts, both endpoints' replies and the shared text must differ.
+    # A later repeat of a prompt may provide the independent match.
+    for (keys_a, evidence_a), (keys_b, evidence_b) in combinations(candidates, 2):
+        if all(a != b for a, b in zip(keys_a, keys_b)):
+            return [evidence_a, evidence_b]
+    return [candidates[0][1]] if candidates else []
 
 
 def partition_long_matches(labels, rows, slots):
@@ -40,7 +42,7 @@ def partition_long_matches(labels, rows, slots):
         compatible = set()
         for left, right in combinations(endpoints, 2):
             matches = prompt_matches(answers.get(left, {}), answers.get(right, {}), prompts)
-            if len(matches) >= MIN_MATCHED_PROMPTS:
+            if len(matches) == 2:
                 compatible.add((left, right))
                 edges.append({"endpoints": [left, right], "matches": matches})
         groups = []
