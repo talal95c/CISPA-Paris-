@@ -8,6 +8,8 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import sys
+import tempfile
 import threading
 import time
 
@@ -94,8 +96,38 @@ def append_json(path,row):
 def read_jsonl(path):
     if not path.exists():
         return []
-    with path.open() as handle:
-        return [json.loads(line) for line in handle if line.strip()]
+    rows=[];lines=[];repair=False
+    with path.open('rb') as handle:
+        for number,line in enumerate(handle,1):
+            if not line.strip():
+                continue
+            try:
+                row=json.loads(line.decode('utf-8'))
+            except (json.JSONDecodeError,UnicodeDecodeError):
+                print(f'WARNING: ignoring corrupt JSONL line {number} in {path}',file=sys.stderr)
+                repair=True
+                continue
+            rows.append(row)
+            lines.append(line if line.endswith(b'\n') else line+b'\n')
+            repair|=not line.endswith(b'\n')
+    if repair:
+        temporary=None
+        try:
+            with tempfile.NamedTemporaryFile(dir=path.parent,prefix=f'.{path.name}.',delete=False) as handle:
+                temporary=Path(handle.name)
+                handle.writelines(lines)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.replace(temporary,path)
+            directory_fd=os.open(path.parent,os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        finally:
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+    return rows
 
 
 def answer_key(row):

@@ -94,6 +94,57 @@ class CollectTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 collect.save_fixed(directory/'plan.json','two')
 
+    def test_mock_resume_repairs_corrupt_journals_without_recollecting(self):
+        prompts=[dict(id=str(i),prompt='test') for i in range(2)]
+        manifest={p['id']:dict(items=[]) for p in prompts}
+        paid=[dict(endpoint=f'ref-{i:02}',id='0',repeat=0,prompt='test',response=f'paid {i}') for i in range(1,4)]
+        with tempfile.TemporaryDirectory() as directory,patch('socket.socket',side_effect=AssertionError('Network forbidden')):
+            directory=Path(directory)
+            answers=directory/'answers.jsonl';journal=directory/'responses.jsonl'
+            answers.write_bytes((json.dumps(paid[0])+'\n{"endpoint":').encode())
+            events=[dict(event='success',answer=row) for row in paid[1:]]
+            journal.write_bytes((json.dumps(events[0])+'\ncorrupt middle line\n'+json.dumps(events[1])+'\n{"event":"succ').encode()+b'\xc3')
+            warnings=io.StringIO()
+            with patch.object(collect,'make_protocol',return_value=(prompts,manifest)),patch.object(collect,'CACHE') as cache,patch.object(collect.np,'load',return_value=contextlib.nullcontext({v:[] for v in collect.VARIANTS})),patch.object(collect,'append_json',wraps=collect.append_json) as append,contextlib.redirect_stderr(warnings),contextlib.redirect_stdout(io.StringIO()):
+                cache.glob.return_value=iter([Path('unused.npz')])
+                collect.main(['--mock','--target','refs','--out',str(directory)])
+            self.assertEqual(warnings.getvalue().count('WARNING: ignoring corrupt JSONL line'),3)
+            new_keys={collect.answer_key(call.args[1]['answer']) for call in append.call_args_list if call.args[0]==journal}
+            paid_keys={collect.answer_key(row) for row in paid}
+            expected={(f'ref-{i:02}',str(j),0) for i in range(1,10) for j in range(2)}
+            self.assertEqual(new_keys,expected-paid_keys)
+            for path in [answers,journal]:
+                rows=[json.loads(line) for line in path.read_text().splitlines()]
+                self.assertEqual(len(rows),18 if path==answers else 17)
+                self.assertTrue(path.read_bytes().endswith(b'\n'))
+            rows=collect.read_jsonl(answers)
+            self.assertEqual({collect.answer_key(row) for row in rows},expected)
+            for row in paid:
+                self.assertIn(row,rows)
+            self.assertEqual(collect.recover(directory),expected)
+
+    def test_jsonl_empty_missing_and_valid_unterminated_line(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'journal.jsonl'
+            self.assertEqual(collect.read_jsonl(path),[])
+            path.touch()
+            self.assertEqual(collect.read_jsonl(path),[])
+            path.write_text('{"id": 0}')
+            self.assertEqual(collect.read_jsonl(path),[{'id':0}])
+            collect.append_json(path,{'id':1})
+            self.assertEqual([json.loads(line) for line in path.read_text().splitlines()],[{'id':0},{'id':1}])
+
+    def test_jsonl_failed_repair_preserves_original(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'journal.jsonl'
+            original=b'{"id":0}\n{"id":'
+            path.write_bytes(original)
+            with patch.object(collect.os,'replace',side_effect=OSError('repair failed')),contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaisesRegex(OSError,'repair failed'):
+                    collect.read_jsonl(path)
+            self.assertEqual(path.read_bytes(),original)
+            self.assertEqual(list(path.parent.iterdir()),[path])
+
 
 if __name__=='__main__':
     unittest.main()
