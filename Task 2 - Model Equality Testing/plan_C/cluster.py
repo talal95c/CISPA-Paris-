@@ -157,7 +157,8 @@ def main():
             why.append("persona(F1 role)")
         f2 = " ".join(data[e].get("F2", []))
         body = re.sub(r"^\W*none\W*", "", f2.strip(), flags=re.I)
-        if body and LEAK.search(body) and not OWN_F2.search(body):
+        leak, own = LEAK.search(body), OWN_F2.search(body)
+        if body and leak and not (own and own.start() < leak.start()):
             why.append("sys(F2 leak)")
         flags[e] = why
 
