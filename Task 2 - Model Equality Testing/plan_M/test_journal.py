@@ -134,6 +134,21 @@ class TeamJournalTests(unittest.TestCase):
         self.assertEqual(identity_family(
             "I’m an AI assistant and an open-source language model developed by Alibaba Cloud."
         ), "Qwen")
+        self.assertEqual(identity_family(
+            "I’m an AI assistant and a language model known as Qwen2.5-Instruct."
+        ), "Qwen")
+        self.assertEqual(identity_family(
+            "I am an AI assistant and a language model developed by Alibaba Cloud to help users."
+        ), "Qwen")
+        self.assertEqual(identity_family(
+            "I am an AI assistant and a large language model created by Meta AI, and I can help."
+        ), "Llama")
+        self.assertEqual(identity_family(
+            "I'm an AI assistant and a language model known as Claude 3.5 Sonnet."
+        ), "Anthropic")
+        self.assertIsNone(identity_family(
+            "I’m an AI assistant and a chatbot known as Claude Sonnet also answers questions."
+        ))
         self.assertIsNone(identity_family("I'm a bot that can explain a model known as Qwen."))
         self.assertIsNone(identity_family("I'm a bot and can explain a model known as Qwen."))
         self.assertIsNone(identity_family(
