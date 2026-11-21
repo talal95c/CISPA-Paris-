@@ -81,8 +81,11 @@ def generated(text, prompt):
     # Remove the supplied stem only at the beginning; do not trim a coincidental shared opening.
     if "\n\n" in prompt and prompt.lower().startswith("continue"):
         stem = prompt.rsplit("\n\n", 1)[1].strip()
-        pat = r"^\s*[*_\"“«]*" + r"\s+".join(map(re.escape, stem.split())) + r"\b"
-        return re.sub(pat, "", text, count=1, flags=re.I).lstrip()
+        if stem:
+            pat = r"^\s*[*_\"“«]*" + r"\s+".join(map(re.escape, stem.split()))
+            if re.search(r"\w$", stem):
+                pat += r"\b"
+            return re.sub(pat, "", text, count=1, flags=re.I).lstrip()
     return text.strip()
 
 

@@ -17,6 +17,11 @@ class ProfileTests(unittest.TestCase):
         self.assertEqual(p.divergence(["a", "b"], ["a", "c"]), 2)
         self.assertIsNone(p.divergence(["a"], ["a"]))
 
+    def test_punctuated_stem_and_word_boundary(self):
+        prompt = "Continue the following text:\n\nOnce upon a time"
+        self.assertEqual(p.generated("Once upon a time, the sun rose.", prompt + ","), "the sun rose.")
+        self.assertEqual(p.generated("Once upon a timetable", prompt), "Once upon a timetable")
+
     def test_no_rank_or_diversity_in_tiny_or_short_samples(self):
         self.assertIsNone(p.rank(.5, [.1, .2, .3]))
         self.assertEqual(p.rank(.5, [.5] * 7), .5)
