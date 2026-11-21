@@ -4,7 +4,7 @@ import asyncio
 import json
 
 REPO = "github.com/talal95c/CISPA-Paris-"
-REV = "d9e35af1b2e02a2c2d1f31a1ac7e8b5090ea2974"
+REV = "41f5244acc3baf4352abea55f2643e7f0a666856"
 COMMON = f"""In {REPO}, fetch and check out {REV} (the pinned judge and agent roles).
 Only use Task 2 - Model Equality Testing/agents. Never inspect labels, other branches,
 holdouts or secrets. No network except installing pinned dependencies via install.sh.

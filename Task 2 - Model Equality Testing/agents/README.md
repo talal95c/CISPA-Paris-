@@ -38,3 +38,14 @@ python check_candidate.py runs/finalist.json runs/held.json \
 Geler le finaliste **avant** ce contrôle. Critère préalable à une soumission : dépasser à la fois zéro et le MCC du point de départ `lex` sur **chacune** des deux familles simulées et la deuxième génération des références réelles (L01–L09). Les familles simulées ont servi à des expériences précédentes ; ce n'est pas une preuve de généralisation sur des checkpoints inédits. Après un échec, ne pas optimiser sur ces scores : il faut un nouveau jeu de contrôle pour une nouvelle campagne.
 
 Si le critère passe, `--real-answers journal.jsonl --previous-csv precedent.csv --write-csv nouveau.csv` applique le regroupement aux **réponses déjà en cache** avec les familles estimées, vérifie les 33 identifiants et refuse une partition inchangée. Soumettre seulement après le délai d'équipe de 30 minutes. Conserver le retour de cette soumission : le leaderboard n'affiche que le meilleur score public, pas nécessairement celui du dernier essai.
+
+## Premier passage : pas de soumission
+
+Le workflow à deux agents a testé cinq formules au format Famou, puis quatre variantes sélectionnées avec l'arbre AIDE (propositions du deuxième agent Devin). L'évolution hébergée Famou n'a pas été utilisée. Le finaliste `max(lex,length)` et son seuil `1.1457654714285714` ont été gelés avant d'ouvrir le contrôle. Le proposant GGUF, testé séparément, n'a pas battu `lex`. Le contrôle simple avait déjà trouvé la formule du finaliste en quatre essais ; sa liste de tirages est désormais conservée lorsque le budget augmente.
+
+| MCC modèle | Dév. famille A | Dév. famille B | Pythia-14M (réservé) | TinyStories-8M (réservé) | Références, série 2 |
+|---|---:|---:|---:|---:|---:|
+| `lex` | 0,000 | 0,000 | 0,180 | −0,195 | −0,265 |
+| Finaliste | 0,342 | 0,333 | 0,444 | −0,304 | 0,194 |
+
+Échec du critère sur TinyStories-8M ; pas de CSV ni de nouveau score public. Les cinq blocs d'une même famille ne sont pas cinq familles indépendantes. Étape proposée : des questions de contenu à réponse vérifiable et leurs reformulations, en mesurant séparément les faux regroupements de variantes et les ruptures dues aux déguisements.
