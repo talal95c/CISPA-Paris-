@@ -61,9 +61,15 @@ def official(truth, prediction):
 
 
 def audit(expr, cutoff, held, refs, key):
+    if set(held) != {"holdout3", "holdout4"} or any(
+        len(cs) != 5 for cs in held.values()
+    ):
+        raise ValueError("Expected five blocks each from holdout3 and holdout4")
     measure = arena.formula(expr)
     with Path(key).open() as f:
         truth = {r["endpoint"]: (r["family"], r["model"]) for r in csv.DictReader(f)}
+    if set(truth) != {f"ref-{i:02}" for i in range(1, 10)}:
+        raise ValueError("Expected reference key for ref-01..09")
     out = {
         name: arena.at([arena.states(c, measure) for c in cs], cutoff)
         for name, cs in held.items()

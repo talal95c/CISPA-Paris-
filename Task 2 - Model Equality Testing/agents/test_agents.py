@@ -3,11 +3,20 @@ import unittest
 from pathlib import Path
 
 import arena
-from check_candidate import official
+from check_candidate import official, audit
 from famou.evaluator import evaluate, read_expr
 
 
 class AgentsTest(unittest.TestCase):
+    def test_audit_refuses_missing_family_or_block(self):
+        for held in (
+            {},
+            {"holdout3": [{}] * 5},
+            {"holdout3": [{}] * 5, "holdout4": [{}] * 4},
+        ):
+            with self.assertRaisesRegex(ValueError, "five blocks each"):
+                audit("lex", 1.0, held, None, None)
+
     def test_no_candidate_execution(self):
         for expr in (
             "obj.x",
