@@ -1,0 +1,4 @@
+# Collection itself uses only the standard library.
+numpy>=1.26,<3
+torch==2.7.1
+transformers==4.51.3

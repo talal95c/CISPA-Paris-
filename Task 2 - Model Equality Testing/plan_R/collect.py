@@ -5,6 +5,7 @@ import json
 import os
 import time
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from pathlib import Path
@@ -117,9 +118,9 @@ def collect(base, key, endpoints, slots, output, wave, scored):
                 with lock:
                     snapshot = tuple(rows.items())
                 replaced = {r["probe_id"] for (e, _), r in snapshot if e == ep and
-                            r["id"].startswith("reserve-") and r["event"] == "answer" and r["response"]}
+                            r["id"].startswith("reserve-") and (r.get("response") or "").strip()}
                 failures = [s for s in slots if not s.id.startswith("reserve-") and s.id not in replaced
-                            and (ep, s.id) in rows and not rows[ep, s.id].get("response")]
+                            and (ep, s.id) in rows and not (rows[ep, s.id].get("response") or "").strip()]
                 if failures:
                     probe = failures[0]
             payload = completion(ep, probe.prompt)
@@ -178,10 +179,17 @@ def main():
     p.add_argument("--wave", choices=("1", "2", "all"), default="all")
     p.add_argument("--items", type=int, choices=[12, *range(20, 26)], default=20)
     p.add_argument("--output", type=Path, default=Path("answers.jsonl"))
+    p.add_argument("--manifest-out", type=Path, help="export the frozen probes as JSON")
     args = p.parse_args()
     scored = args.target == "scored"
     endpoints = [f"{'ep' if scored else 'ref'}-{n+1:02d}" for n in range(33 if scored else 9)]
     slots = manifest(size=args.items)
+    if args.manifest_out:
+        if args.manifest_out.resolve() == args.output.resolve():
+            p.error("--manifest-out must not overwrite the response journal")
+        with args.manifest_out.open("x", encoding="utf-8") as file:
+            json.dump([asdict(slot) for slot in slots], file, ensure_ascii=False, indent=2)
+            file.write("\n")
     if not (args.live or args.mock):
         count = sum(args.wave != "1" or s.wave == 1 for s in slots)
         print(f"Dry run: {len(endpoints)} × {count} slots; manifest SHA256 {fingerprint(slots)}; no network")

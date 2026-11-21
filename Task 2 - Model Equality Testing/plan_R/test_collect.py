@@ -13,8 +13,12 @@ from protocol import manifest
 
 class CollectionTests(unittest.TestCase):
     def test_dry_run_does_not_call_http(self):
-        with patch("sys.argv", ["collect.py", "--target", "refs", "--dry-run"]), patch("collect.request") as send:
-            main()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "manifest.json"
+            with patch("sys.argv", ["collect.py", "--target", "refs", "--dry-run", "--manifest-out", str(path)]), \
+                    patch("collect.request") as send:
+                main()
+            self.assertEqual(json.loads(path.read_text())[34]["id"], "burst-01")
         send.assert_not_called()
 
     def test_manifest(self):
