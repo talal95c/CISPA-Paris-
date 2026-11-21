@@ -52,6 +52,21 @@ python simulate.py --engine probe --skip-phase --heldout-prompts --families 2 3 
 python replay.py --development dev.jsonl --holdout held.jsonl --output evaluation.json --practice-output practice-sim.csv
 ```
 
+## Résultats hors ligne sur réponses réelles (vague 1)
+
+Instantané F1/F2 : 63 réponses (F2 absent pour ep-24, ep-32 et ep-33). Instantané suivant : 176 réponses (F1–F4 et L01 complets, 11 L02). Aucun nouvel appel ni soumission. L'adaptateur valide les prompts d'origine puis projette F1–F3 et les longues sur les canaux homologues de R ; ce ne sont pas les formulations du manifeste gelé. F4 est conservé à part : une liste de nombres premiers ne teste pas `FORMAT_OK`.
+
+- **Gelé — `submission_R_F1F2.csv` et `submission_R_wave1_frozen.csv` sont identiques.** Avec `--allow-partial --profile simple` (repli préenregistré, aucun réglage), R place les 33 endpoints dans F1, avec 33 modèles distincts. Aucun drapeau identité/persona ni fuite n'est déclenché sur les 33 endpoints ; le détecteur F2 exige deux motifs, contre 0, 1 et 0 observés pour ep-16, ep-29 et ep-31, signalés par l'équipe.
+- **Exploratoire — `submission_R_wave1_exact_F3F4.csv`.** Conserve les familles gelées et relie les modèles si les deux réponses brutes F3 et F4 sont exactement identiques. Groupes : {ep-04, ep-12, ep-17, ep-18, ep-25} et {ep-19, ep-29} ; 26 singletons. Ce signal de format et de style ne prouve pas l'égalité des modèles.
+
+Écarts par paires (famille / modèle), indépendants des noms de classes : gelé vs C F1/F2 **242 / 2**, vs M drapeaux **376 / 0**, vs M longues **283 / 0**. Pour la variante, ces écarts sont **242 / 13**, **376 / 11** et **283 / 11**. Le scoreur local de R donne 0 au gelé quelle que soit la vérité, car les deux prédictions binaires sont constantes. À titre conditionnel, la variante donnerait 0,90 si ses 11 paires modèle étaient exactement les vraies, avec des négatifs dans les vraies familles ; si les 11 étaient fausses, le score local écrêté serait 0. Ce ne sont pas des estimations du score caché. Le 0,05 public communiqué par l'équipe provient d'une autre soumission.
+
+```sh
+python import_snapshot.py journal answers_snapshot.jsonl wave1_prompts.jsonl wave1_offline.jsonl
+python submit.py wave1_offline.jsonl submission_R_wave1_frozen.csv --allow-partial --profile simple
+python import_snapshot.py exact-flags wave1_offline.jsonl submission_R_wave1_frozen.csv submission_R_wave1_exact_F3F4.csv
+```
+
 ## Collecte notée — à lancer plus tard, une seule fois par l'équipe
 
 Depuis `Task 2 - Model Equality Testing/plan_R/`. Avant la vague 1, convenir du manifeste des trois plans, de la taille des rafales et d'un journal commun persistant. L'exemple fige 20 items ; si l'équipe valide le repli à 12, remplacer **partout** `--items 20` par `--items 12`. Les deux vagues doivent utiliser le même manifeste.
