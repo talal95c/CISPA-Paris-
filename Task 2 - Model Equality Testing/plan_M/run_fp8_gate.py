@@ -30,6 +30,29 @@ NAMES = ("Sam", "Lily", "Jamie", "Mia", "Leo", "Alex", "Nina", "Ben")
 OBJECTS = ("key", "box", "coin", "book", "rope", "lamp", "shell", "mirror")
 PLACES = ("garden", "village", "forest", "river", "attic", "park", "shop", "field")
 
+EXPOSITORY_TOPICS = (
+    "municipal recycling", "telescope optics", "public library funding",
+    "crop rotation", "submarine cables", "rainwater storage",
+    "consumer price indices", "thermal insulation", "auroras", "urban zoning",
+    "battery recycling", "passenger rail", "digital signatures", "wheat milling",
+    "the tides", "paper restoration", "heat pumps", "glacial erosion",
+    "pharmacy supply chains", "ocean acidification",
+)
+EXPOSITORY_FRAMES = (
+    "A practical introduction to {topic} should begin by explaining",
+    "The main quantities used to measure {topic} are",
+    "One limitation of traditional approaches to {topic} is",
+    "For a general audience, a concise explanation of {topic} is",
+    "A recent technical report on {topic} raised the question of",
+    "In planning a public workshop about {topic}, the first session would cover",
+    "A historical account of {topic} typically mentions",
+    "The evidence commonly cited in discussions of {topic} includes",
+    "A news brief about {topic} would lead with",
+    "The strongest argument for investing in research on {topic} is",
+    "A glossary entry for {topic} must distinguish",
+    "Policy documents about {topic} often address the trade-off between",
+)
+
 
 def prompt_bank(count: int, seed: int) -> list[str]:
     candidates = [
@@ -37,6 +60,15 @@ def prompt_bank(count: int, seed: int) -> list[str]:
         for frame in FRAMES for name in NAMES for item in OBJECTS for place in PLACES
     ]
     return random.Random(seed).sample(candidates, count)
+
+
+def expository_blocks(blocks: int, prompts_per_block: int, seed: int) -> list[str]:
+    """Hold out the entire expository type, with one distinct topic per block."""
+    topics = random.Random(seed).sample(EXPOSITORY_TOPICS, blocks)
+    return [
+        frame.format(topic=topic)
+        for topic in topics for frame in EXPOSITORY_FRAMES[:prompts_per_block]
+    ]
 
 
 @torch.inference_mode()
@@ -109,7 +141,10 @@ def run(args) -> dict:
         tokenizer.pad_token = tokenizer.eos_token
     checkpoint = AutoModelForCausalLM.from_pretrained(args.model, local_files_only=True)
     baseline, fp8 = make_replicas(checkpoint, args.scheme)
-    prompts = prompt_bank(args.blocks * args.prompts, args.seed)
+    if args.prompt_family == "expository":
+        prompts = expository_blocks(args.blocks, args.prompts, args.seed)
+    else:
+        prompts = prompt_bank(args.blocks * args.prompts, args.seed)
     decode = Decode(args.temperature, args.top_p)
     torch.use_deterministic_algorithms(True)
     left_model = baseline if args.null else fp8
@@ -149,6 +184,7 @@ def run(args) -> dict:
         "checkpoint": args.model.name,
         "revision": revision_path.read_text().strip() if revision_path.is_file() else None,
         "seed": args.seed,
+        "prompt_family": args.prompt_family,
         "scheme": args.scheme,
         "sample_scheme": sample_scheme if left_variant == "fp8" else None,
         "left_variant": left_variant,
@@ -182,6 +218,7 @@ def main():
     parser.add_argument("--sample-scheme", choices=("w8a16", "w8a8"))
     parser.add_argument("--blocks", type=int, default=10)
     parser.add_argument("--prompts", type=int, default=6, help="Prompts per disjoint block")
+    parser.add_argument("--prompt-family", choices=("stories", "expository"), default="stories")
     parser.add_argument("--tokens", type=int, default=64)
     parser.add_argument("--batch-size", type=int, default=12)
     parser.add_argument("--threads", type=int, default=4)
@@ -198,6 +235,10 @@ def main():
         parser.error("Blocks, prompts, tokens, batch size and threads must be positive")
     if args.sample_scheme and (args.null or args.lora_strength is not None):
         parser.error("Sample scheme applies only when the left variant is FP8")
+    if args.prompt_family == "expository" and (
+        args.blocks > len(EXPOSITORY_TOPICS) or args.prompts > len(EXPOSITORY_FRAMES)
+    ):
+        parser.error("Expository holdout has up to 20 topic blocks of 12 prompts")
     result = json.dumps(run(args), indent=2) + "\n"
     if args.output:
         args.output.write_text(result)

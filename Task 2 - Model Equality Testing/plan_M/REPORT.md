@@ -30,6 +30,12 @@ Le contrôle LoRA utilise la même perturbation aléatoire de rang 4 avec trois 
 
 On projette les décisions plain/fp8 des cinq blocs disjoints sur deux familles de neuf endpoints. Les labels de famille, de déguisement et de LoRA sont imposés par la vérité terrain. La formule officielle (0,1 × MCC famille + 0,9 × MCC modèle) donne **médiane 1,000, q10 1,000, minimum 1,000**. Le repli qui rattache les deux candidats donne **0,760** avec les mêmes labels imposés. Le MCC global sur des rejeux intégraux de 100 réponses et le portail global de C restent à mesurer.
 
+## Contrôle de généralisation
+
+Protocole fixé avant scoring. Le troisième checkpoint est [DistilGPT2](https://huggingface.co/distilbert/distilgpt2/tree/2290a62682d06624634c1f46a6ad5be0f47f38aa). Les prompts d’exposition remplacent entièrement les histoires des premiers essais. Un bloc contient 12 prompts sur un seul sujet, distinct des sujets des 19 autres blocs. Les réponses visibles sont plafonnées à 64 tokens. Le score reste le signe du LLR W8A16 contre bf16, avec écrêtage à ±3, T=1 et top-p=1. On fixe le seuil de réplication à 17 blocs bien classés sur 20, avec une graine fixée à 3001. La probabilité binomiale d’atteindre 17/20 si la vraie précision est 0,60 vaut environ 1,6 % sous l’hypothèse d’indépendance des blocs.
+
+Les poids, la grille de décodage et la règle de classement sont gelés avant l’ouverture du holdout. Si le résultat échoue, on conserve le repli C. Toute règle révisée devra être validée sur un autre checkpoint et un autre type de prompts. Pour le pipeline complet, sélectionner prompts et checkpoints sur les blocs de calibration, figer les réglages, puis mesurer le MCC global sur des blocs frais de 100 réponses. Séparer aussi les types de prompts et les familles entre calibration et test. Le score public sert au contrôle du format.
+
 ## Rejouer et intégrer
 
 Prérequis testés sous Python 3.12 : PyTorch 2.6.0 CPU, Transformers 4.51.3 et les modèles téléchargés au préalable. Révisions HF utilisées : [TinyStories-1M](https://huggingface.co/roneneldan/TinyStories-1M/tree/77f1b168e219585646439073245fe87e56b3023e) et [Pythia-14M](https://huggingface.co/EleutherAI/pythia-14m/tree/cf967c0a9a04383db6f7b1108d86b2962634b4ac).
