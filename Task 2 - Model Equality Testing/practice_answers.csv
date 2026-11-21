@@ -1,0 +1,10 @@
+endpoint,family,model,kind
+ref-01,P,S,plain
+ref-02,P,T1,quantized (fp8)
+ref-03,P,S,system prompt
+ref-04,P,T3,LoRA at strength 0.7
+ref-05,P,S,persona
+ref-06,P,S,watermark
+ref-07,P,T4,LoRA at strength 1.5
+ref-08,P,S,sampling at temperature 1.0
+ref-09,P,T2,LoRA at strength 0.3
