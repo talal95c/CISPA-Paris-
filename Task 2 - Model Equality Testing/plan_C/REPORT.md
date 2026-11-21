@@ -191,4 +191,13 @@ Familles : mots-clés d'identité en F1 ; découpe en 2 d'un groupe si les profi
 F4 est prioritaire par défaut : listes des dix premiers nombres premiers sans espace après virgule → A, avec espaces → B, si chaque signature compte ≥ 3 endpoints (`--no-f4-split` pour désactiver) ; les réponses sans signature vont au groupe le plus petit (égalité → A).
 Une famille scindée par F4 ne subit pas de split L* supplémentaire ; labels S et doublons sont recalculés dans chaque sous-famille.
 Modèles : déguisements signalés (persona via F1, fuite de prompt système via F2) → label S de la famille ; doublons exacts de L* fusionnés ; le reste en singletons. `--prefix-link N` optionnel (désactivé : plain, fp8 et LoRA 0,3 partagent leurs préfixes en décodage quasi déterministe).
-Sur l'instantané F1+F2 : Llama-S = ep-16, ep-29 ; Qwen-S = ep-20, ep-23. Le score public de 0,05 d'un seul modèle par famille vient du seul MCC_family (≈ 0,5) : il y a probablement plus de 2 familles, à trancher avec les L*.
+Sur l'instantané F1+F2 : Llama-S = ep-16, ep-29 ; Qwen-S = ep-20, ep-23. Le score public de 0,05 ne permet pas de déduire le nombre de familles : si les familles prédites ne coïncident pas avec les vraies, même un modèle prédit par famille ne garantit pas un MCC modèle nul.
+
+## Diagnostic du snapshot de 256 réponses : base + singletons
+
+`python3 profile_snapshot.py answers.jsonl --table profils.csv --details prompts.csv -o submission.csv`.
+Familles QA/QB/L **imposées** par l'équipe (10/12/11), sans ajustement sur les refs ni sur le classement. La structure de la practice motive l'hypothèse, pas des quotas de singletons.
+Les 124 longues comprennent L01–L03 sur les 33 endpoints et L04 sur 25. On compare des pairs de la même famille sur le même prompt, hors endpoint étudié, après retrait du début de texte fourni. On ne compte pas plusieurs répétitions d'un prompt comme des votes indépendants. Les colonnes calculées sur une fenêtre lexicale trop courte restent vides.
+
+Ep-16 et ep-23 déclarent un rôle explicite ; ep-16 produit aussi des instructions en F2. Ep-20 revendique Anthropic (persona ou hallucination). Ep-29 produit des instructions en F2 (source invérifiable). Ep-26 manque de longues suffisamment longues ; « plain-like » pour les 28 autres signifie *sans signal discriminant répété*, pas « poids identifiés ».
+Le cumul diversité + rareté n'est élevé que sur deux prompts au plus par endpoint. Une fin sans ponctuation n'est pas une mesure d'EOS ; une dérive de style ne distingue pas LoRA, T, watermark ou persona. Faute d'évidence indépendante sur les poids, **aucun singleton** ; la sortie est un plancher, pas une nouvelle estimation de score. Si les familles sont exactes, ce plancher prédit toutes les paires intra-famille identiques, donc MCC modèle nul.
