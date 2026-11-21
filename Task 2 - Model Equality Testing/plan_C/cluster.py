@@ -5,8 +5,8 @@ Usage: python cluster.py answers.jsonl [-o submission.csv] [--split-threshold 0.
 Floor rule (plan R):
   family : identity keywords in F1 (Qwen/Alibaba, Llama/Meta, ...); endpoints without a keyword go to the nearest
            family by character 4-gram profile of their long answers (L*), else to the largest family. A keyword group
-           is split in two when the average-linkage gap on long-answer profiles exceeds --split-threshold
-           (two sizes of the same base answer with the same identity).
+           is split by F4 comma spacing when each format has >= 3 endpoints (A: no spaces, B: spaces).
+           Otherwise, split when the average-linkage gap on long-answer profiles exceeds --split-threshold.
   model  : endpoints flagged as disguised (persona: F1 off-identity; system prompt: F2 leaks instructions) share the
            family's S label; long answers duplicated verbatim also merge; every other endpoint stays a singleton.
 Diagnostics go to stderr.
@@ -106,12 +106,45 @@ def split_two(eps, prof, thr):
     return cl, gap
 
 
+def f4_signature(answers):
+    signatures = set()
+    for response in answers.get("F4", []):
+        text = response.strip()
+        if not re.fullmatch(r"\d+(?:,[ \t]*\d+)+", text):
+            return None
+        if [int(n) for n in re.findall(r"\d+", text)] != [2, 3, 5, 7, 11, 13, 17, 19, 23, 29]:
+            return None
+        spaces = re.findall(r",([ \t]*)", text)
+        if all(not s for s in spaces):
+            signatures.add("compact")
+        elif all(spaces):
+            signatures.add("spaced")
+        else:
+            return None
+    return next(iter(signatures)) if len(signatures) == 1 else None
+
+
+def split_f4(name, members, data, enabled=True):
+    groups = {s: [] for s in ["compact", "spaced", None]}
+    for e in members:
+        groups[f4_signature(data[e])].append(e)
+    print(f"{name}: F4 " + "; ".join(f"{s or 'unsigned'}={len(p)} {p}" for s, p in groups.items()), file=sys.stderr)
+    if not enabled or min(len(groups[s]) for s in ["compact", "spaced"]) < 3:
+        return None
+    parts = [groups["compact"], groups["spaced"]]
+    for e in groups[None]:
+        parts[min(range(2), key=lambda i: len(parts[i]))].append(e)
+    print(f"  F4 split: {name}A (compact)={parts[0]}; {name}B (spaced)={parts[1]}; L* split skipped", file=sys.stderr)
+    return parts
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("answers")
     ap.add_argument("-o", "--output", default="submission.csv")
     ap.add_argument("--split-threshold", type=float, default=0.25)
     ap.add_argument("--endpoints", type=int, default=33)
+    ap.add_argument("--no-f4-split", action="store_true", help="disable family splitting by F4 comma spacing")
     ap.add_argument("--prefix-link", type=int, default=0,
                     help="merge two endpoints of a family whose long answers share >= N leading words on average "
                          "(0 = off; risky: near-greedy plain, fp8 and LoRA 0.3 share prefixes too)")
@@ -129,11 +162,7 @@ def main():
             groups[ident[e]].append(e)
     if not groups:
         groups["fam"] = []
-    fams = []
-    for name, members in sorted(groups.items()):
-        parts, gap = split_two(members, prof, a.split_threshold)
-        print(f"{name}: {len(members)} endpoints, 2-split gap={gap if gap is None else round(gap, 3)}", file=sys.stderr)
-        fams += [[f"{name}{k + 1}" if len(parts) > 1 else name, p] for k, p in enumerate(parts)]
+    fams = [[name, members] for name, members in sorted(groups.items())]
 
     for e in eps:
         if ident[e]:
@@ -146,6 +175,17 @@ def main():
         if best is None:
             best = max(range(len(fams)), key=lambda i: len(fams[i][1]))
         fams[best][1].append(e)
+
+    identity_fams = fams
+    fams = []
+    for name, members in identity_fams:
+        parts = split_f4(name, members, data, enabled=not a.no_f4_split)
+        if parts is not None:
+            fams += [[f"{name}{suffix}", p] for suffix, p in zip("AB", parts)]
+        else:
+            parts, gap = split_two(members, prof, a.split_threshold)
+            print(f"{name}: {len(members)} endpoints, 2-split gap={gap if gap is None else round(gap, 3)}", file=sys.stderr)
+            fams += [[f"{name}{k + 1}" if len(parts) > 1 else name, p] for k, p in enumerate(parts)]
 
     family = {e: name for name, p in fams for e in p}
     flags = {}
