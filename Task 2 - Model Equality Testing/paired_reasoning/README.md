@@ -13,7 +13,7 @@ This is a stringent small-sample screen, not a statistical significance test. Pa
 
 ## Run
 
-Requires Python 3.10+ and only the standard library. Put the team's credential in `CISPA_KEY`; do not commit it, response text or the local database. No code path queries a scored endpoint or submits a file. The single coordinator uses three request workers (team limit four); coordinate with other team collectors first. Use one collector process per database.
+Requires Python 3.10+ and only the standard library. Put the team's credential in `CISPA_KEY`; do not commit it, response text or the local database. No code path queries a scored endpoint or submits a file. The single coordinator defaults to one request worker and backs off on rate limits. Coordinate with other team collectors first; `--workers` allows at most three (team limit four). Use one collector process per database.
 
 ```sh
 python -m unittest -q

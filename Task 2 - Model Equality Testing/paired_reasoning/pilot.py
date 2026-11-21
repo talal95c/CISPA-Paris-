@@ -1,7 +1,7 @@
 """Reference-only reasoning experiment. No client for scored endpoints or submissions."""
 import argparse
 from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import closing
 import hashlib
 from itertools import product
@@ -48,7 +48,7 @@ def query(ref, prompt, key):
                        "max_tokens": TOKENS}).encode()
     req = request.Request(URL, data=body, headers={"Content-Type": "application/json",
                                                   "X-API-Key": key})
-    for attempt in range(3):
+    for attempt in range(8):
         try:
             with request.build_opener(NoRedirect()).open(req, timeout=90) as r:
                 choice = json.load(r)["choices"][0]
@@ -57,9 +57,11 @@ def query(ref, prompt, key):
                 raise ValueError("Unexpected non-text response")
             return text, choice.get("finish_reason")
         except error.HTTPError as exc:
-            if exc.code not in (429, 502, 503, 504) or attempt == 2:
+            if exc.code not in (429, 502, 503, 504) or attempt == 7:
                 raise
-            time.sleep(max(2 ** (attempt + 1), int(exc.headers.get("Retry-After", "0"))))
+            delay = max(min(60, 2 ** (attempt + 1)), int(exc.headers.get("Retry-After", "0")))
+            print(f"{ref}: HTTP {exc.code}; retry after {delay}s", flush=True)
+            time.sleep(delay)
 
 
 def connect(path, items):
@@ -76,26 +78,40 @@ def connect(path, items):
     return db
 
 
-def collect(db, items, block, key):
+def collect(db, items, block, key, workers=1):
+    if workers not in range(1, 4):
+        raise ValueError("Use 1 to 3 workers")
     done = set(db.execute("SELECT block,item,form,rep,ref FROM responses"))
     pending = [j for j in jobs(items, block) if j not in done]
     if block == 2 and not set(jobs(items, 1)).issubset(done):
         raise ValueError("Complete block 1 before block 2")
     random.Random(15340 + block).shuffle(pending)
-    with ThreadPoolExecutor(max_workers=3) as pool:
-        futures = {pool.submit(query, ref, items[i][f] + SUFFIX, key): (b, i, f, r, ref)
-                   for b, i, f, r, ref in pending}
-        try:
-            for n, future in enumerate(as_completed(futures), start=1):
-                text, finish = future.result()
+    stream = iter(pending)
+    failed = None
+    n = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {}
+        while True:
+            while not failed and len(futures) < workers and (j := next(stream, None)):
+                _, i, f, _, ref = j
+                futures[pool.submit(query, ref, items[i][f] + SUFFIX, key)] = j
+            if not futures:
+                break
+            for future in wait(futures, return_when=FIRST_COMPLETED).done:
+                j = futures.pop(future)
+                try:
+                    text, finish = future.result()
+                except Exception as exc:
+                    failed = exc
+                    continue
                 with db:
                     db.execute("INSERT INTO responses VALUES(?,?,?,?,?,?,?)",
-                               (*futures[future], text, finish))
+                               (*j, text, finish))
+                n += 1
                 if n % 24 == 0:
                     print(f"Block {block}: saved {n}/{len(pending)} pending results", flush=True)
-        finally:
-            for future in futures:
-                future.cancel()
+    if failed:
+        raise failed
 
 
 def parse(text):
@@ -143,11 +159,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("db", type=Path)
     ap.add_argument("--collect-block", type=int, choices=(1, 2))
+    ap.add_argument("--workers", type=int, default=1, choices=(1, 2, 3))
     args = ap.parse_args()
     items = bank()
     with closing(connect(args.db, items)) as db:
         if args.collect_block:
-            collect(db, items, args.collect_block, os.environ["CISPA_KEY"])
+            collect(db, items, args.collect_block, os.environ["CISPA_KEY"], args.workers)
         else:
             print(json.dumps(analyze(db, items), indent=2))
 
