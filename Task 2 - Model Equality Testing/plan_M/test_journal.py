@@ -7,7 +7,7 @@ from unittest.mock import patch
 from duel import apply_duels
 from journal import long_answers, normalize_rows, read_jsonl
 from long_matches import partition_long_matches, prompt_matches
-from team_protocol import identity_family, team_journal
+from team_protocol import FLAGS, identity_family, split_flag_families, team_journal
 
 
 def slot(identifier, prompt, kind="long"):
@@ -103,6 +103,25 @@ class JournalTests(unittest.TestCase):
 
 
 class TeamJournalTests(unittest.TestCase):
+    def test_flag_families_require_two_exact_answers_within_one_anchor(self):
+        labels = {ep: ("Qwen", "shared") for ep in ("a", "b", "c", "d")}
+        labels["e"] = ("Llama", "other")
+        flags = {
+            "a": ("Helpful.", "2,3,5"),
+            "b": ("Helpful.\n", "2,3,5"),
+            "c": ("Helpful.", "2, 3, 5"),
+            "d": ("Helpful.", ""),
+            "e": ("Helpful.", "2,3,5"),
+        }
+        rows = [dict(endpoint=ep, id=FLAGS[probe], event="answer", response=text)
+                for ep, texts in flags.items() for probe, text in zip(("F3", "F4"), texts)]
+        split = split_flag_families(labels, rows)
+        self.assertEqual(split["a"], split["b"])
+        self.assertNotEqual(split["a"][0], labels["a"][0])
+        self.assertNotEqual(split["a"][1], labels["a"][1])
+        for ep in "cde":
+            self.assertEqual(split[ep], labels[ep])
+
     def test_identity_recognizes_explicit_name_and_bot_creator(self):
         self.assertEqual(identity_family("I am a language model, known as Qwen."), "Qwen")
         self.assertEqual(identity_family("I'm a bot developed by Meta AI."), "Llama")

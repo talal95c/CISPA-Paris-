@@ -1,6 +1,7 @@
 """Adapter for the team's identity probes and long-completion journal."""
 
 import re
+from collections import defaultdict
 from dataclasses import replace
 from statistics import median
 
@@ -98,6 +99,29 @@ def signature_slots(slots):
     # repeat statistic. Empty item lists leave this channel unavailable.
     return [*slots, *(replace(slots[0], id=pid, kind="burst", prompt="")
                       for pid in ("burst-01", "burst-02"))]
+
+
+def split_flag_families(labels, rows):
+    """Give repeated, exact F3/F4 signatures their own family within an anchor."""
+    f3, f4 = FLAGS["F3"], FLAGS["F4"]
+    answers = defaultdict(dict)
+    for row in rows:
+        if row["id"] in (f3, f4) and row["event"] == "answer" and row["response"]:
+            answers[row["endpoint"]][row["id"]] = row["response"].replace("\r\n", "\n").strip()
+
+    groups = defaultdict(list)
+    for endpoint in sorted(answers.keys() & labels.keys()):
+        signature = (answers[endpoint].get(f3), answers[endpoint].get(f4))
+        if all(signature):
+            groups[(labels[endpoint][0], signature)].append(endpoint)
+
+    split = labels.copy()
+    for (family, _), members in groups.items():
+        if len(members) >= 2:
+            subfamily = f"{family}-flags-{members[0]}"
+            for endpoint in members:
+                split[endpoint] = subfamily, f"{subfamily}-{labels[endpoint][1]}"
+    return split
 
 
 def estimate_family(signature, grouped_anchors, features):
