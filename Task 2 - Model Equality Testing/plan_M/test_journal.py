@@ -28,6 +28,10 @@ class JournalTests(unittest.TestCase):
             source.write_text('{"first": true}\n{"torn":\n', encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "invalid JSON"):
                 list(read_jsonl(source, allow_incomplete_tail=True))
+            source.write_bytes(b'{"first": true}\n{"torn": "\xc3')
+            self.assertEqual(list(read_jsonl(source, allow_incomplete_tail=True)), [{"first": True}])
+            with self.assertRaisesRegex(ValueError, "invalid JSON"):
+                list(read_jsonl(source))
 
     def test_four_field_reserve_repair(self):
         slots = [slot("long-01", "original"), slot("reserve-01", "reserve", "burst")]

@@ -30,14 +30,14 @@ def manifest_from_json(path, protocol):
 
 
 def read_jsonl(path: Path, *, allow_incomplete_tail=False):
-    with path.open(encoding="utf-8") as stream:
+    with path.open("rb") as stream:
         for line_number, line in enumerate(stream, 1):
             if not line.strip():
                 continue
             try:
-                row = json.loads(line)
-            except json.JSONDecodeError as exc:
-                if allow_incomplete_tail and not line.endswith("\n"):
+                row = json.loads(line.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                if allow_incomplete_tail and not line.endswith(b"\n"):
                     return
                 raise ValueError(f"{path}:{line_number}: invalid JSON") from exc
             if not isinstance(row, dict):
