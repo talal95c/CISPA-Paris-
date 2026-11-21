@@ -1,9 +1,12 @@
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from duel import apply_duels
-from journal import long_answers, normalize_rows
+from journal import long_answers, normalize_rows, read_jsonl
+from team_protocol import identity_family, team_journal
 
 
 def slot(identifier, prompt, kind="long"):
@@ -15,6 +18,17 @@ def row(endpoint, identifier, prompt, response):
 
 
 class JournalTests(unittest.TestCase):
+    def test_partial_snapshot_skips_only_a_torn_final_line(self):
+        with TemporaryDirectory() as directory:
+            source = Path(directory) / "answers.jsonl"
+            source.write_text('{"first": true}\n{"torn":', encoding="utf-8")
+            self.assertEqual(list(read_jsonl(source, allow_incomplete_tail=True)), [{"first": True}])
+            with self.assertRaisesRegex(ValueError, "invalid JSON"):
+                list(read_jsonl(source))
+            source.write_text('{"first": true}\n{"torn":\n', encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "invalid JSON"):
+                list(read_jsonl(source, allow_incomplete_tail=True))
+
     def test_four_field_reserve_repair(self):
         slots = [slot("long-01", "original"), slot("reserve-01", "reserve", "burst")]
         rows, endpoints = normalize_rows([
@@ -81,6 +95,27 @@ class JournalTests(unittest.TestCase):
             predicted, report = apply_duels(labels, rows, slots, [entry])
         self.assertEqual(predicted, labels)
         self.assertEqual(report[0]["matched"], 11)
+
+
+class TeamJournalTests(unittest.TestCase):
+    def test_identity_needs_attribution_and_abstains_on_conflict(self):
+        self.assertEqual(identity_family("I am a model developed by Meta AI."), "Llama")
+        self.assertEqual(identity_family("I am Qwen2.5, a language model created by Alibaba Cloud."), "Qwen")
+        self.assertEqual(identity_family("I am an AI assistant created by Anthropic."), "Anthropic")
+        self.assertIsNone(identity_family("I was not created by Meta AI."))
+        self.assertIsNone(identity_family("I'm a bot that can explain how Qwen works."))
+        self.assertIsNone(identity_family("I am a model created by Meta or Alibaba."))
+
+    def test_partial_team_journal_keeps_missing_targets_and_canonicalizes_longs(self):
+        source = [dict(endpoint="ep-01", id="L1", repeat=0, prompt="fixed prompt", response="answer")]
+        protocol = SimpleNamespace(Slot=lambda identifier, kind, wave, prompt: slot(identifier, prompt, kind))
+        rows, endpoints, slots = team_journal(source, [], protocol, allow_partial=True,
+                                              expected=["ep-01", "ep-02"])
+        self.assertEqual(len(slots), 33)
+        self.assertEqual(rows[0]["id"], "long-01")
+        self.assertEqual(endpoints, ["ep-01", "ep-02"])
+        with self.assertRaisesRegex(ValueError, "unfinished"):
+            team_journal(source, [], protocol, allow_partial=False, expected=endpoints)
 
 
 if __name__ == "__main__":

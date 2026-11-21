@@ -61,8 +61,8 @@ def main():
         features, partition, protocol, submission = load_shared(args.shared_dir)
         source = list(read_jsonl(args.journal, allow_incomplete_tail=args.allow_partial))
         team = args.protocol == "team" or (args.protocol == "auto" and (
-            args.prompts or any(isinstance(pid := row.get("prompt_id", row.get("id")), str)
-                                and team_prompt_id(pid) in SLOTS for row in source)
+            args.prompts is not None or any(isinstance(pid := row.get("prompt_id", row.get("id")), str)
+                                            and team_prompt_id(pid) in SLOTS for row in source)
         ))
         prefix, count = ("ep", 33) if args.target == "scored" else ("ref", 9)
         expected = None if args.target == "replay" else [f"{prefix}-{i:02d}" for i in range(1, count + 1)]
