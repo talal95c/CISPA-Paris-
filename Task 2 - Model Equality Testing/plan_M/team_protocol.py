@@ -18,11 +18,15 @@ FAMILY_MARKERS = {
     "Llama": re.compile(r"\b(?:llama(?=\d|\W|$)|meta (?:ai|platforms)\b|(?<=by )meta\b)", re.I),
     "Anthropic": re.compile(r"\b(?:anthropic|claude)(?=\d|\W|$)", re.I),
 }
-ROLE_PHRASE = (
-    r"(?:an?|the)\s+(?:(?!(?:an?|the|and|that|which|who)\b)[\w-]+\s+){0,8}"
-    r"(?:model|assistant|bot|chatbot|program|journalist|ai)"
+ROLE_NOUN = r"(?:model|assistant|bot|chatbot|program|journalist|ai)"
+ROLE_PHRASE = rf"(?:an?|the)\s+(?:(?!(?:an?|the|and|that|which|who)\b)[\w-]+\s+){{0,8}}{ROLE_NOUN}"
+# After "and", require a direct role so a new clause cannot claim someone else's creator.
+COORDINATED_MODIFIER = (
+    r"(?:ai|artificial|intelligence|large|small|language|generative|conversational|"
+    r"virtual|digital|helpful|advanced|general-purpose|multilingual|text-based)"
 )
-SELF_ROLE = rf"{ROLE_PHRASE}(?:,?\s+and\s+{ROLE_PHRASE})*"
+COORDINATED_ROLE = rf"(?:an?|the)\s+(?:{COORDINATED_MODIFIER}\s+)*{ROLE_NOUN}"
+SELF_ROLE = rf"{ROLE_PHRASE}(?:,?\s+and\s+{COORDINATED_ROLE})*"
 NAME_CLAIM = re.compile(
     rf"\b(?:i (?:am|go by)|i['’]m|my name is)\s+(?:(?:{SELF_ROLE},?\s+)?known as\s+)?"
     r"(?:(?:an?|the)\s+)?\**$", re.I,
