@@ -3,6 +3,7 @@ import argparse
 from collections import Counter, defaultdict
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 from contextlib import closing
+from email.utils import parsedate_to_datetime
 import hashlib
 from itertools import product
 import json
@@ -49,6 +50,17 @@ class NoRedirect(request.HTTPRedirectHandler):
         return None
 
 
+def retry_seconds(header, now):
+    if not header:
+        return 0
+    if header.isascii() and header.isdigit():
+        return int(header)
+    try:
+        return max(0, parsedate_to_datetime(header).timestamp() - now)
+    except (ValueError, TypeError, OverflowError):
+        return 0
+
+
 def query(ref, prompt, key):
     if ref not in REFS:
         raise ValueError("Only ref-01..ref-09 are allowed")
@@ -67,7 +79,7 @@ def query(ref, prompt, key):
         except error.HTTPError as exc:
             if exc.code not in (429, 502, 503, 504) or attempt == 7:
                 raise
-            delay = max(min(60, 2 ** (attempt + 1)), int(exc.headers.get("Retry-After", "0")))
+            delay = max(min(60, 2 ** (attempt + 1)), retry_seconds(exc.headers.get("Retry-After"), time.time()))
             print(f"{ref}: HTTP {exc.code}; retry after {delay}s", flush=True)
             time.sleep(delay)
 

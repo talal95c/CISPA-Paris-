@@ -53,3 +53,10 @@ class PilotTest(unittest.TestCase):
         with patch.dict("os.environ", CISPA_HTTPS_ORIGIN="http://34.147.229.55"):
             with self.assertRaises(ValueError):
                 pilot.query("ref-01", "test", "dummy")
+
+    def test_retry_after(self):
+        self.assertEqual(pilot.retry_seconds("19", 0), 19)
+        date = "Thu, 01 Jan 1970 00:01:00 GMT"
+        self.assertEqual(pilot.retry_seconds(date, 12), 48)
+        self.assertEqual(pilot.retry_seconds(date, 65), 0)
+        self.assertEqual(pilot.retry_seconds("invalid", 0), 0)
