@@ -190,12 +190,9 @@ def simulate_scores(families, split, params, q, repeats=200):
     active = params['active_items']
     data = [probabilities(f, split, active, two_codes=params['enable_watermark']) for f in families]
     rng = np.random.default_rng(821 + (0 if split=='tune' else 100))
-    # Exact simulated flag rates across 200 replays per endpoint kind, not threshold fitting.
-    noisy = np.empty((len(families), 9, repeats), bool)
-    for f in range(len(families)):
-        for v in range(9):
-            positive = int(round((q if v in (5,6) else .05)*repeats))
-            noisy[f,v] = rng.permutation(np.arange(repeats)<positive)
+    # Independent Bernoulli flags, not a fixed number of detections across replays.
+    rates=np.array([q if v in (5,6) else .05 for v in range(9)])
+    noisy=rng.random((len(families),9,repeats))<rates[None,:,None]
     results = {method: [] for method in ['R','C']}
     family_scores = []
     model_scores = {method:[] for method in results}
