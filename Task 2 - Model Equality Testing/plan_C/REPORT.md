@@ -183,3 +183,10 @@ Les caches publics locaux de l'étape 1 restent nécessaires au dry-run/mock.
 Le scoreur practice n'est utilisé que comme contrôle format/score, jamais pour
 ajuster les décisions. Voir `results_phase0.md` et les JSON associés pour le
 détail des portails, des scores et du gel.
+
+## Ajout : `cluster.py` sur les vraies réponses partielles (vague 1)
+
+`python3 cluster.py answers.jsonl -o submission.csv` (stdlib seule ; diagnostic sur stderr ; données partielles OK).
+Familles : mots-clés d'identité en F1 ; découpe en 2 d'un groupe si les profils 4-grammes des L* sont séparés (`--split-threshold`).
+Modèles : déguisements signalés (persona via F1, fuite de prompt système via F2) → label S de la famille ; doublons exacts de L* fusionnés ; le reste en singletons. `--prefix-link N` optionnel (désactivé : plain, fp8 et LoRA 0,3 partagent leurs préfixes en décodage quasi déterministe).
+Sur l'instantané F1+F2 : Llama-S = ep-16, ep-29 ; Qwen-S = ep-20, ep-23. Le score public de 0,05 d'un seul modèle par famille vient du seul MCC_family (≈ 0,5) : il y a probablement plus de 2 familles, à trancher avec les L*.
