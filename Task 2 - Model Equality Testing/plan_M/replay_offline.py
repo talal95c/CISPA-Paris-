@@ -77,7 +77,8 @@ def main():
                 left, right = duel["candidates"]
                 matched = matched_longs(answers, longs, left, right)
                 margin = status.get("margin_nats")
-                if status["status"] == "different_families" and len(matched) >= MIN_MATCHED_LONGS:
+                if (status["status"] in {"different_families", "multiple_duels_in_family"}
+                        and len(matched) >= MIN_MATCHED_LONGS):
                     margin = rank_pair(load_replica(duel["checkpoint"], duel["scheme"]), answers, matched,
                                        left, right, duel["prompt_format"], duel["temperature"], duel["top_p"])
                 orientations.append(dict(block=block, candidates=[left, right], matched=len(matched),

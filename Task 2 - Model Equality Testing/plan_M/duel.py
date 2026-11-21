@@ -1,5 +1,6 @@
 """Optional local FP8 ranking for explicitly vetted within-family candidates."""
 
+from collections import Counter
 from functools import lru_cache
 from math import isfinite
 from pathlib import Path
@@ -57,20 +58,26 @@ def apply_duels(labels, rows, slots, duels):
     labels = labels.copy()
     answers, long_slots = long_answers(rows, slots)
     report = []
-    used_families = set()
+    families = []
     for entry in duels:
         left, right = entry["candidates"]
         anchor = entry["plain_anchor"]
         names = (left, right, anchor)
         if len(set(names)) != 3 or any(name not in labels for name in names):
             raise ValueError("A duel requires three distinct endpoints present in the journal")
-        family, model = labels[anchor]
-        if any(labels[name][0] != family for name in (left, right)):
+        group_ids = {labels[name][0] for name in names}
+        families.append(labels[anchor][0] if len(group_ids) == 1 else None)
+    counts = Counter(families)
+    for entry, family in zip(duels, families, strict=True):
+        left, right = entry["candidates"]
+        anchor = entry["plain_anchor"]
+        if family is None:
             report.append(dict(candidates=[left, right], status="different_families"))
             continue
-        if family in used_families:
-            raise ValueError(f"More than one duel for family {family}")
-        used_families.add(family)
+        if counts[family] > 1:
+            report.append(dict(candidates=[left, right], status="multiple_duels_in_family"))
+            continue
+        family, model = labels[anchor]
         matched = matched_longs(answers, long_slots, left, right)
         if len(matched) < MIN_MATCHED_LONGS:
             report.append(dict(candidates=[left, right], status="too_few_matched_longs", matched=len(matched)))
