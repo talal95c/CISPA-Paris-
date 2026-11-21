@@ -1,0 +1,5 @@
+evolve_config:
+  max_iterations: 10
+initial_program: init.py
+evaluator: evaluator.py
+system_message: prompt.md

@@ -1,5 +1,7 @@
 # CISPA-Paris-
 
+[Agents Famou et AIDE pour la tâche 2](Task%202%20-%20Model%20Equality%20Testing/agents/README.md) : installation, pilote CPU et contrôle avant soumission.
+
 ## Datasets du hackathon
 
 Depuis la racine du dépôt, lancez cette commande avec Python 3 pour télécharger
