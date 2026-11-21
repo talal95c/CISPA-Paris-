@@ -23,3 +23,5 @@ python pilot.py /path/to/local.sqlite
 ```
 
 The cache commits each completed response, checks the bank and request settings on resume, and rejects incomplete audits.
+
+**Transport:** the published competition example uses plain HTTP. This collector refuses it and never follows redirects. Obtain an organizer-confirmed TLS endpoint or a trusted institutional TLS gateway before live collection, set `CISPA_HTTPS_ORIGIN` to its HTTPS origin and keep normal certificate verification enabled. Do not use an arbitrary reverse proxy or relay to the organizer over an untrusted plaintext link.

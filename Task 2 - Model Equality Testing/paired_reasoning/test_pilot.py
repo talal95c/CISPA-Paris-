@@ -48,3 +48,8 @@ class PilotTest(unittest.TestCase):
             pilot.collect(self.db, self.items, 1, "")
         self.assertEqual(mock.call_count, 36)
         self.assertTrue(all(call.args[0] in pilot.REFS for call in mock.call_args_list))
+
+    def test_http_is_refused_before_request(self):
+        with patch.dict("os.environ", CISPA_HTTPS_ORIGIN="http://34.147.229.55"):
+            with self.assertRaises(ValueError):
+                pilot.query("ref-01", "test", "dummy")

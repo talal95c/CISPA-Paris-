@@ -12,16 +12,24 @@ import random
 import re
 import sqlite3
 import time
-from urllib import error, request
+from urllib import error, parse as urlparse, request
 
 
 ROOT = Path(__file__).resolve().parent
 REFS = tuple(f"ref-{i:02}" for i in range(1, 10))
 BASE = ("ref-01", "ref-03", "ref-05", "ref-06", "ref-08")
 VARIANTS = tuple(ref for ref in REFS if ref not in BASE)
-URL = "http://34.147.229.55/33-model-equality/v1/chat/completions"
 SUFFIX = "\nReply with just the answer as one integer in digits, without units or explanation."
 TOKENS = 64
+
+
+def api_url():
+    origin = os.environ.get("CISPA_HTTPS_ORIGIN", "https://34.147.229.55")
+    u = urlparse.urlsplit(origin)
+    if (u.scheme != "https" or not u.hostname or u.username is not None
+            or u.path not in ("", "/") or u.query or u.fragment):
+        raise ValueError("Set CISPA_HTTPS_ORIGIN to the organizers' verified HTTPS origin")
+    return origin.rstrip("/") + "/33-model-equality/v1/chat/completions"
 
 
 def bank():
@@ -46,7 +54,7 @@ def query(ref, prompt, key):
         raise ValueError("Only ref-01..ref-09 are allowed")
     body = json.dumps({"model": ref, "messages": [{"role": "user", "content": prompt}],
                        "max_tokens": TOKENS}).encode()
-    req = request.Request(URL, data=body, headers={"Content-Type": "application/json",
+    req = request.Request(api_url(), data=body, headers={"Content-Type": "application/json",
                                                   "X-API-Key": key})
     for attempt in range(8):
         try:
@@ -66,7 +74,7 @@ def query(ref, prompt, key):
 
 def connect(path, items):
     db = sqlite3.connect(path)
-    stamp = hashlib.sha256(json.dumps([items, SUFFIX, TOKENS, URL], sort_keys=True).encode()).hexdigest()
+    stamp = hashlib.sha256(json.dumps([items, SUFFIX, TOKENS, api_url()], sort_keys=True).encode()).hexdigest()
     with db:
         db.execute("CREATE TABLE IF NOT EXISTS config(id INTEGER PRIMARY KEY, digest TEXT)")
         db.execute("INSERT OR IGNORE INTO config VALUES(1,?)", (stamp,))
