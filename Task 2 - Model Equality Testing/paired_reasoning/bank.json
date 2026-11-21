@@ -1,0 +1,30 @@
+[
+  {
+    "id": "temporal",
+    "a": "A reading begins at 11:47 a.m. and ends at 12:26 p.m. Its only pause lasts 8 minutes. How many minutes are spent reading?",
+    "b": "From 11:47 a.m. until 12:26 p.m., a narrator reads aloud except for one 8-minute break. How long does the narrator spend reading aloud, in minutes?",
+    "gold": 31,
+    "proof": "13 + 26 - 8 = 31 minutes."
+  },
+  {
+    "id": "count_with_overlap",
+    "a": "At a fair, 16 stalls sell mugs and 13 sell bowls. Five sell both. How many stalls sell exactly one of those two items?",
+    "b": "A fair lists 16 mug sellers and 13 bowl sellers, with five stalls on both lists. How many stalls appear on just one list?",
+    "gold": 19,
+    "proof": "(16 - 5) + (13 - 5) = 19 stalls."
+  },
+  {
+    "id": "discrete_arithmetic",
+    "a": "A bookbinder needs 47 blank sheets and has 12. Extra sheets come only in packs of eight. What is the fewest packs she must buy?",
+    "b": "A binder has 12 of the 47 sheets a book requires. How many whole packs of eight would just cover the shortfall, allowing leftover sheets?",
+    "gold": 5,
+    "proof": "ceil((47 - 12) / 8) = 5 packs."
+  },
+  {
+    "id": "order_logic",
+    "a": "A potter fires a cup, a bowl, a jug and a tray one at a time. The tray goes last, and the cup goes before the jug. How many firing orders are possible?",
+    "b": "A tray closes a firing schedule whose first three slots hold a bowl, a jug and a cup in some order. How many schedules put the jug later than the cup?",
+    "gold": 3,
+    "proof": "Half the 3! permutations of the first three objects place the cup before the jug."
+  }
+]
