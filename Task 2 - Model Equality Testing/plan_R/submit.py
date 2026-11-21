@@ -29,6 +29,10 @@ def main():
     parser.add_argument("--profile", choices=("R", "simple"), default="R")
     parser.add_argument("--provisional", action="store_true", help="S1: group flags but leave plain candidates separate")
     args = parser.parse_args()
+    if args.output.resolve() == args.journal.resolve() or (
+        args.output.exists() and args.journal.exists() and args.output.samefile(args.journal)
+    ):
+        parser.error("output must not overwrite the input journal")
     rows = read_rows(args.journal)
     slots = manifest(size=args.items)
     if not rows or rows[0].get("sha256") != fingerprint(slots):
