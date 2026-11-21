@@ -116,16 +116,21 @@ def temperature_result(temp):
 
 
 def phase(rows, size):
-    answer_rows = [r for r in rows if r["event"] == "answer"]
-    by_run = defaultdict(list)
-    for row in answer_rows:
-        by_run[row["block"]].append(row)
+    phase_runs, replay_runs = defaultdict(list), defaultdict(list)
+    for row in rows:
+        if row["event"] != "answer":
+            continue
+        block = row["block"]
+        if isinstance(block, int):
+            replay_runs[row.get("heldout", False), block].append(row)
+        else:
+            phase_runs[block].append(row)
     result = {}
     for size_phase in (20, 12):
         slots = phase_slots(size=size_phase)
         by_id = {s.id: s for s in slots}
         data = defaultdict(list)
-        for row in by_run[f"phase{size_phase}"]:
+        for row in phase_runs[f"phase{size_phase}"]:
             data[row["variant"]].append(row)
         plain = panel(data["plain"], slots)
         marked = panel(data["watermark"], slots)
@@ -159,19 +164,17 @@ def phase(rows, size):
         }
     flags, temp, shape, flag_errors = defaultdict(list), defaultdict(list), defaultdict(list), Counter()
     negative_names = ("fp8", "lora03", "lora07", "lora15")
-    for run, data in by_run.items():
-        if not isinstance(run, int):
-            continue
+    for (heldout, run), data in replay_runs.items():
         variants = {r["endpoint"]: r["variant"] for r in data}
-        for ep, sig in signatures(data, replay_slots(run, size)).items():
+        for ep, sig in signatures(data, replay_slots(run, size, heldout=heldout)).items():
             name = variants[ep]
             flag = sig.flags["strength"] >= 1.5
             flags[name].append(flag)
             flag_errors[name] += flag
             if sig.repeat["disagreement"] is not None:
-                temp[name].append((run, sig.repeat["disagreement"]))
+                temp[name].append(((heldout, run), sig.repeat["disagreement"]))
             if sig.repeat["shape"] is not None:
-                shape[name].append((run, sig.repeat["shape"]))
+                shape[name].append(((heldout, run), sig.repeat["shape"]))
     rates = {name: {"rate": flag_errors[name]/len(points), "n": len(points)} for name, points in flags.items()}
     flag_go = (all(rates.get(v, {"rate": 0})["rate"] >= .9 for v in ("system", "persona")) and
                all(rates.get(v, {"rate": 1})["rate"] <= .05 for v in negative_names))
@@ -193,7 +196,7 @@ def main():
         parser.error("all journals must start with the simulation header")
     if any(journal[0]["items"] != journals[0][0]["items"] for journal in journals):
         parser.error("journals must share the replay item count")
-    rows = [row for journal in journals for row in journal[1:]]
+    rows = [dict(row, heldout=journal[0].get("heldout", False)) for journal in journals for row in journal[1:]]
     result = phase(rows, journals[0][0]["items"])
     args.output.write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result, indent=2))

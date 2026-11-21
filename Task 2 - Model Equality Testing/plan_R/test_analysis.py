@@ -1,21 +1,23 @@
 import csv
+import io
 import json
 import tempfile
 import threading
 import unittest
+from contextlib import redirect_stdout
 from http.server import ThreadingHTTPServer
 from pathlib import Path
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import numpy as np
 
 from collect import TASK_PATH, completion, request
 from features import DEFAULTS, clipped_llr, dispersion, flag_features, parse_burst, signatures
 from partition import confusion, family_proposals, mcc, optimize_joint, pairs, rule, score
-from phase import effectiveness, free_text_null, watermark_gate
+from phase import effectiveness, free_text_null, main as phase_main, watermark_gate
 from protocol import manifest
 from replay import check_budget, holdout
-from simulate import VARIANTS, replay_slots
+from simulate import VARIANTS, phase_jobs, replay_slots
 from simulate_server import make_handler
 from submit import FROZEN_CONFIG, write_csv
 
@@ -86,6 +88,28 @@ class AnalysisTests(unittest.TestCase):
         self.assertEqual(effectiveness(varied), (1.0, 4))
         texts = [{"id": "a", "repeat": i, "response": value} for i, value in enumerate(("apple", "zebra"))]
         self.assertEqual(free_text_null(texts), {"text_pairs": 1, "text_mean": 1.0, "text_q95": 1.0})
+
+    def test_phase_reads_common_phase_probes_and_heldout_replay_probes(self):
+        dev_burst = next(slot for slot in replay_slots(0) if slot.id == "burst-01")
+        dev_tags = {item.tag for item in dev_burst.items}
+        held = {slot.id: slot for slot in replay_slots(0, heldout=True)}
+        item = next(item for item in held["burst-01"].items if item.tag not in dev_tags)
+        rows = [{"event": "simulation", "items": 20, "heldout": True}]
+        for slot_id, choice in (("burst-01", "A"), ("burst-61", "B")):
+            rows.append({"event": "answer", "endpoint": "ref-09", "block": 0, "id": slot_id,
+                         "variant": "temp", "response": f"{item.tag} {choice}"})
+        block, slot, rep = next(phase_jobs("plain", 1))
+        rows.append({"event": "answer", "endpoint": "ref-01", "block": block, "id": slot.id,
+                     "variant": "plain", "repeat": rep, "response": f"{slot.items[0].tag} A"})
+        with tempfile.TemporaryDirectory() as tmp:
+            journal, output = Path(tmp) / "heldout.jsonl", Path(tmp) / "phase.json"
+            journal.write_text("\n".join(map(json.dumps, rows)))
+            with patch("sys.argv", ["phase.py", str(journal), "--output", str(output)]), redirect_stdout(io.StringIO()):
+                phase_main()
+            result = json.loads(output.read_text())
+        self.assertEqual(result["B7"]["n_positives"], 1)
+        self.assertEqual(result["20"]["B2"]["n"], 1)
+        self.assertAlmostEqual(result["20"]["B3"]["plain_item_coverage"], 1 / len(slot.items))
 
     def test_exact_budget_and_stable_holdout(self):
         slots = replay_slots(3)
