@@ -17,9 +17,12 @@ FAMILY_MARKERS = {
     "Llama": re.compile(r"\b(?:llama(?=\d|\W|$)|meta (?:ai|platforms)\b|(?<=by )meta\b)", re.I),
     "Anthropic": re.compile(r"\b(?:anthropic|claude)(?=\d|\W|$)", re.I),
 }
-SELF_ROLE = r"(?:an?|the)\s+(?:[\w-]+\s+){0,8}(?:model|assistant|chatbot|program|journalist|ai)"
+SELF_ROLE = (
+    r"(?:an?|the)\s+(?:(?!(?:an?|the|that|which|who)\b)[\w-]+\s+){0,8}"
+    r"(?:model|assistant|bot|chatbot|program|journalist|ai)"
+)
 NAME_CLAIM = re.compile(
-    rf"\b(?:i (?:am|go by)|i['’]m|my name is)\s+(?:(?:{SELF_ROLE}\s+)?known as\s+)?"
+    rf"\b(?:i (?:am|go by)|i['’]m|my name is)\s+(?:(?:{SELF_ROLE},?\s+)?known as\s+)?"
     r"(?:(?:an?|the)\s+)?\**$", re.I,
 )
 CREATOR_CLAIM = re.compile(
