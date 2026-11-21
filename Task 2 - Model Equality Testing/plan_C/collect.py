@@ -93,7 +93,7 @@ def append_json(path,row):
         os.fsync(handle.fileno())
 
 
-def read_jsonl(path):
+def read_jsonl(path,repair_corrupt=False):
     if not path.exists():
         return []
     rows=[];lines=[];repair=False
@@ -103,10 +103,14 @@ def read_jsonl(path):
                 continue
             try:
                 row=json.loads(line.decode('utf-8'))
-            except (json.JSONDecodeError,UnicodeDecodeError):
+            except (json.JSONDecodeError,UnicodeDecodeError) as error:
+                if not repair_corrupt:
+                    raise ValueError(f'Corrupt JSONL line {number} in {path}; manual inspection required before resume') from error
                 print(f'WARNING: ignoring corrupt JSONL line {number} in {path}',file=sys.stderr)
                 repair=True
                 continue
+            if not line.endswith(b'\n') and not repair_corrupt:
+                raise ValueError(f'Unterminated JSONL line {number} in {path}; manual inspection required before resume')
             rows.append(row)
             lines.append(line if line.endswith(b'\n') else line+b'\n')
             repair|=not line.endswith(b'\n')
@@ -135,12 +139,12 @@ def answer_key(row):
 
 
 def recover(directory):
+    events=read_jsonl(directory/'responses.jsonl')
     answers=directory/'answers.jsonl'
-    rows=read_jsonl(answers)
+    rows=read_jsonl(answers,repair_corrupt=True)
     done={answer_key(x) for x in rows}
     if len(done)!=len(rows):
         raise ValueError('Duplicate answer keys; refusing ambiguous resume')
-    events=read_jsonl(directory/'responses.jsonl')
     pending=set()
     for event in events:
         if event.get('event')=='request':
