@@ -29,7 +29,7 @@ def manifest_from_json(path, protocol):
     ]
 
 
-def read_jsonl(path: Path):
+def read_jsonl(path: Path, *, allow_incomplete_tail=False):
     with path.open(encoding="utf-8") as stream:
         for line_number, line in enumerate(stream, 1):
             if not line.strip():
@@ -37,6 +37,8 @@ def read_jsonl(path: Path):
             try:
                 row = json.loads(line)
             except json.JSONDecodeError as exc:
+                if allow_incomplete_tail and not line.endswith("\n"):
+                    return
                 raise ValueError(f"{path}:{line_number}: invalid JSON") from exc
             if not isinstance(row, dict):
                 raise ValueError(f"{path}:{line_number}: expected an object")
@@ -69,18 +71,14 @@ def normalize_rows(rows, slots, *, allow_partial=False, expected=None):
             raise ValueError(f"{endpoint}: unknown prompt_id {slot_id!r}")
         if not isinstance(prompt, str):
             raise ValueError(f"{endpoint}/{slot_id}: expected prompt text")
-        if (slot_id.startswith("reserve-") and "probe_id" not in entry and
-                prompt != manifest[slot_id].prompt):
-            matches = [pid for pid in by_prompt.get(prompt, []) if not pid.startswith("reserve-")]
-            if not matches:
-                raise ValueError(f"{endpoint}/{slot_id}: reserve prompt is outside the manifest")
-            probe_id = next((pid for pid in matches if not committed.get((endpoint, pid), {}).get("response", "").strip()),
-                            matches[0])
-        if not isinstance(probe_id, str) or probe_id not in manifest:
+        inferred_repair = slot_id.startswith("reserve-") and "probe_id" not in entry and prompt != manifest[slot_id].prompt
+        if inferred_repair:
+            probe_id = None
+        elif not isinstance(probe_id, str) or probe_id not in manifest:
             raise ValueError(f"{endpoint}/{slot_id}: unknown probe_id {probe_id!r}")
-        if slot_id != probe_id and not slot_id.startswith("reserve-"):
+        elif slot_id != probe_id and not slot_id.startswith("reserve-"):
             raise ValueError(f"{endpoint}/{slot_id}: only reserves may repair another probe")
-        if prompt != manifest[probe_id].prompt:
+        elif prompt != manifest[probe_id].prompt:
             raise ValueError(f"{endpoint}/{slot_id}: prompt does not match {probe_id} in the manifest")
         if not isinstance(response, (str, type(None))):
             raise ValueError(f"{endpoint}/{slot_id}: expected response text or null")
@@ -90,6 +88,18 @@ def normalize_rows(rows, slots, *, allow_partial=False, expected=None):
         if key in committed and committed[key] != row:
             raise ValueError(f"{endpoint}/{slot_id}: conflicting completed responses")
         committed[key] = row
+    repaired = {(ep, row["probe_id"]) for (ep, name), row in committed.items()
+                if row["probe_id"] not in (None, name)}
+    for (ep, name), row in sorted(committed.items()):
+        if row["probe_id"] is not None:
+            continue
+        matches = [pid for pid in by_prompt.get(row["prompt"], []) if not pid.startswith("reserve-")]
+        if not matches:
+            raise ValueError(f"{ep}/{name}: reserve prompt is outside the manifest")
+        missing = [pid for pid in matches if (ep, pid) not in repaired and
+                   not committed.get((ep, pid), {}).get("response", "").strip()]
+        row["probe_id"] = (missing or matches)[0]
+        repaired.add((ep, row["probe_id"]))
     endpoints = sorted({key[0] for key in committed})
     if not endpoints:
         raise ValueError("The journal contains no completed slots")
@@ -99,7 +109,9 @@ def normalize_rows(rows, slots, *, allow_partial=False, expected=None):
         missing = sum((endpoint, name) not in committed for endpoint in endpoints for name in manifest)
         if missing:
             raise ValueError(f"{missing} unfinished slots; use --allow-partial for a provisional CSV")
-    return list(committed.values()), endpoints
+    # Keep original observations ahead of any reserves that reuse their prompts.
+    normalized = sorted(committed.values(), key=lambda row: row["id"].startswith("reserve-"))
+    return normalized, endpoints
 
 
 def long_answers(rows, slots):
