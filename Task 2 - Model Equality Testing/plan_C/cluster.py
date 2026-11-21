@@ -166,20 +166,20 @@ def main():
             groups[ident[e]].append(e)
     if not groups:
         groups["fam"] = eps
-    anchors, members_by_name, f4_parts = {}, {}, {}
+    anchors, members_by_name = {}, {}
+    tentative_labels = collections.defaultdict(list)
     for name, members in sorted(groups.items()):
-        parts = split_f4(name, members, data, enabled=not a.no_f4_split)
-        if parts is not None:
-            anchors[name] = members
-            f4_parts[name] = dict(zip(("compact", "spaced"), (name + "A", name + "B")))
-            members_by_name.update(zip(f4_parts[name].values(), parts))
+        counts = collections.Counter(f4_signature(data[e]) for e in members)
+        if not a.no_f4_split and min(counts["compact"], counts["spaced"]) >= 3:
+            parts = [members]
         else:
             parts, gap = split_two(members, prof, a.split_threshold)
             print(f"{name}: {len(members)} endpoints, 2-split gap={gap if gap is None else round(gap, 3)}", file=sys.stderr)
-            for k, p in enumerate(parts, 1):
-                label = f"{name}{k}" if len(parts) > 1 else name
-                anchors[label] = p
-                members_by_name[label] = p.copy()
+        for k, p in enumerate(parts, 1):
+            label = f"{name}{k}" if len(parts) > 1 else name
+            anchors[label] = p
+            members_by_name[label] = p.copy()
+            tentative_labels[name].append(label)
 
     family = {e: name for name, p in members_by_name.items() for e in p}
     exact = collections.defaultdict(set)
@@ -200,12 +200,17 @@ def main():
                     if ds:
                         distances[name] = sum(ds) / len(ds)
             label = min(distances, key=distances.get) if distances else max(anchors, key=lambda n: len(anchors[n]))
-            if label in f4_parts:
-                formats = f4_parts[label]
-                label = formats.get(f4_signature(data[e])) or min(formats.values(), key=lambda n: len(members_by_name[n]))
         family[e] = label
         members_by_name[label].append(e)
-    fams = members_by_name.items()
+    fams = []
+    for name, labels in tentative_labels.items():
+        members = sorted(e for label in labels for e in members_by_name[label])
+        parts = split_f4(name, members, data, enabled=not a.no_f4_split)
+        if parts:
+            fams.extend(zip((name + "A", name + "B"), parts))
+        else:
+            fams.extend((label, members_by_name[label]) for label in labels)
+    family = {e: name for name, p in fams for e in p}
     flags = {}
     for e in eps:
         why = []

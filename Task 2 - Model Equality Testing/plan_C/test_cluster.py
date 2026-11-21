@@ -87,6 +87,22 @@ class ClusterTests(unittest.TestCase):
             self.assertEqual(rows['ep-04']['model'], rows['ep-01']['model'])
             self.assertEqual(rows['ep-05']['family'], 'llama')
 
+    def test_unknown_completes_quorum_and_obeys_own_spacing_despite_duplicate(self):
+        text = 'shared long answer ' * 20
+        data = {f'ep-{i:02}': {'F1': ['Qwen'], 'F4': [COMPACT if i < 3 else SPACED]}
+                for i in range(1, 6)}
+        data['ep-03']['L01'] = [text]
+        data['ep-06'] = {'F4': [COMPACT], 'L01': [text]}
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / 's.csv'
+            args = ['cluster.py', 'unused', '-o', str(output), '--endpoints', '6']
+            with patch('sys.argv', args), patch.object(cluster, 'load', return_value=data), contextlib.redirect_stderr(io.StringIO()):
+                cluster.main()
+            with output.open() as handle:
+                rows = {r['endpoint']: r for r in csv.DictReader(handle)}
+            self.assertEqual(rows['ep-06']['family'], 'qwenA')
+            self.assertEqual(rows['ep-03']['family'], 'qwenB')
+
 
 if __name__ == '__main__':
     unittest.main()
