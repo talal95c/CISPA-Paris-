@@ -106,7 +106,14 @@ class TeamJournalTests(unittest.TestCase):
     def test_identity_recognizes_explicit_name_and_bot_creator(self):
         self.assertEqual(identity_family("I am a language model, known as Qwen."), "Qwen")
         self.assertEqual(identity_family("I'm a bot developed by Meta AI."), "Llama")
+        self.assertEqual(identity_family(
+            "I am an AI assistant and a language model developed by Anthropic."
+        ), "Anthropic")
+        self.assertEqual(identity_family(
+            "I am an AI assistant and a language model, known as Qwen."
+        ), "Qwen")
         self.assertIsNone(identity_family("I'm a bot that can explain a model known as Qwen."))
+        self.assertIsNone(identity_family("I'm a bot and can explain a model known as Qwen."))
 
     def test_identity_needs_attribution_and_abstains_on_conflict(self):
         self.assertEqual(identity_family("I am a model developed by Meta AI."), "Llama")
