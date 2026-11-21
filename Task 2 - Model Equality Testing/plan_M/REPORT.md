@@ -75,6 +75,8 @@ Le format `endpoint,id,repeat,prompt,response` avec `F1`–`F4` et `L01`–`L29`
 
 L’instantané reçu de l’équipe contient 32 réponses F1. Les déclarations identifiables donnent 20 Qwen, 10 Llama et 1 Anthropic. Une réponse est ambiguë et un endpoint est absent. Le CSV provisoire contient 33 labels modèle individuels. F1 renseigne l’identité déclarée, avec une granularité parfois limitée au fournisseur. Le regroupement par checkpoint exact et le repli par longues n’ont pas été validés sur un jeu étiqueté de ce protocole.
 
+Le mode `--model-rule long-match` propose une partition conservatrice à partir des longues. Deux endpoints d’une même famille doivent partager au moins deux prompts distincts dont les réponses sont identiques sur 64 caractères ou plus, ou dont la plus courte est un préfixe intégral de l’autre sur 128 caractères ou plus. La même réponse répétée compte une seule fois. Chaque paire d’un groupe doit satisfaire cette règle. L’instantané suivant contient 33 réponses F1 et 30 F2. Sans longues, le mode produit 33 modèles distincts. Aucun des seuils n’a été choisi à partir des réponses longues de l’équipe ni du score public.
+
 Depuis la racine du dépôt, récupérer la branche de la [PR R](https://github.com/talal95c/CISPA-Paris-/pull/4), puis pointer sur sa version testée, `09b00088616849cfa142bdce982e9360052836d1`.
 
 ```sh
@@ -87,7 +89,8 @@ python "$PLAN_R/collect.py" --dry-run --target scored
 python "$PLAN_M/submit_offline.py" journal.jsonl --shared-dir "$PLAN_R" --dry-run
 python "$PLAN_M/submit_offline.py" journal.jsonl --shared-dir "$PLAN_R" --output submission.csv
 python "$PLAN_M/submit_offline.py" answers.jsonl --shared-dir "$PLAN_R" \
-  --prompts wave1_prompts.jsonl --allow-partial --output submission_team_provisional.csv
+  --prompts wave1_prompts.jsonl --allow-partial --model-rule long-match \
+  --output submission_team_provisional.csv
 ```
 
 Une configuration `--duels` est facultative. La liste JSON contient, pour chaque famille confirmée, deux `candidates` plausibles plain/FP8, un `plain_anchor` équivalent au plain déjà identifié, un `checkpoint` local, le `prompt_format` (`raw`, `chat` ou `user-assistant`), `temperature`, `top_p` et éventuellement `scheme` (`w8a16` par défaut). Le classement demande 12 longues distinctes appariées. Le pipeline s’abstient lorsque les trois endpoints sont séparés, lorsque plusieurs duels tombent dans la même famille inférée ou en l’absence de marge. L’équipe confirme le checkpoint et l’ancre avant d’activer ce canal. Les fonctions `checkpoint_evidence` et `fit_decode` sont disponibles pour effectuer cette vérification sur un jeu de calibration séparé.

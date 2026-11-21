@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from duel import apply_duels
 from journal import long_answers, normalize_rows, read_jsonl
+from long_matches import partition_long_matches, prompt_matches
 from team_protocol import identity_family, team_journal
 
 
@@ -122,6 +123,32 @@ class TeamJournalTests(unittest.TestCase):
         self.assertEqual(endpoints, ["ep-01", "ep-02"])
         with self.assertRaisesRegex(ValueError, "unfinished"):
             team_journal(source, [], protocol, allow_partial=False, expected=endpoints)
+
+    def test_long_matches_require_evidence_for_every_pair(self):
+        slots = [slot(f"long-{i}", f"prompt {i}") for i in range(1, 5)]
+        samples = {probe.id: probe.prompt * 25 for probe in slots}
+        answers = {
+            "a": {"long-1": samples["long-1"], "long-2": samples["long-2"]},
+            "b": {**samples, "long-2": samples["long-2"] + " continued"},
+            "c": {"long-3": samples["long-3"], "long-4": samples["long-4"]},
+            "d": {"long-1": samples["long-1"], "long-2": samples["long-2"]},
+        }
+        rows, _ = normalize_rows([
+            row(ep, pid, next(probe.prompt for probe in slots if probe.id == pid), text)
+            for ep, texts in answers.items() for pid, text in texts.items()
+        ], slots, allow_partial=True)
+        labels = {ep: ("F2" if ep == "d" else "F1", ep) for ep in answers}
+        actual, edges = partition_long_matches(labels, rows, slots)
+        self.assertEqual(actual["a"], actual["b"])
+        self.assertNotEqual(actual["a"], actual["c"])
+        self.assertNotEqual(actual["a"], actual["d"])
+        self.assertEqual(edges[0]["matches"], [("long-1", "exact"), ("long-2", "prefix")])
+        self.assertEqual([edge["endpoints"] for edge in edges], [["a", "b"], ["b", "c"]])
+
+    def test_repeated_identical_output_only_counts_once(self):
+        slots = {"long-1": slot("long-1", "first"), "long-2": slot("long-2", "second")}
+        boilerplate = {"long-1": "A" * 140, "long-2": "A" * 140}
+        self.assertEqual(prompt_matches(boilerplate, boilerplate, slots), [("long-1", "exact")])
 
 
 if __name__ == "__main__":

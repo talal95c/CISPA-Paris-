@@ -6,6 +6,7 @@ from pathlib import Path
 
 from duel import apply_duels
 from journal import load_shared, manifest_from_json, normalize_rows, read_jsonl
+from long_matches import partition_long_matches
 from team_protocol import SLOTS, infer_team, signature_slots, team_journal, team_prompt_id
 
 
@@ -13,7 +14,7 @@ DEFAULT_SHARED = Path(__file__).resolve().parent.parent / "plan_R"
 
 
 def predict(rows, endpoints, slots, features, partition, config, profile,
-            *, duels=(), item_filter=None, team=False):
+            *, duels=(), item_filter=None, team=False, model_rule="profile"):
     signatures = features.signatures(rows, signature_slots(slots) if team else slots, item_filter=item_filter)
     params, settings = config["params"], config["profiles"][profile]
     if team:
@@ -25,8 +26,11 @@ def predict(rows, endpoints, slots, features, partition, config, profile,
     for index, endpoint in enumerate(missing, 1):
         family = f"unobserved-{index}"
         labels[endpoint] = family, family
-    labels, evidence = apply_duels(labels, rows, slots, duels)
-    details = {"families": info["families"], "unobserved": missing, "duels": evidence}
+    details = {"families": info["families"], "unobserved": missing}
+    if model_rule == "long-match":
+        labels, matches = partition_long_matches(labels, rows, slots)
+        details["long_match_edges"] = matches
+    labels, details["duels"] = apply_duels(labels, rows, slots, duels)
     if team:
         details["identity_anchors"] = info["identity_anchors"]
     return labels, details
@@ -43,6 +47,7 @@ def main():
     parser.add_argument("--manifest", type=Path, help="explicit JSON manifest exported by the common collector")
     parser.add_argument("--prompts", type=Path, help="frozen team prompt list in JSONL")
     parser.add_argument("--profile", choices=("R", "simple"), default="simple")
+    parser.add_argument("--model-rule", choices=("profile", "long-match"), default="profile")
     parser.add_argument("--duels", type=Path, help="optional JSON list of already vetted white-box duels")
     parser.add_argument("--threads", type=int, default=4, help="CPU thread count for optional white-box inference")
     parser.add_argument("--allow-partial", action="store_true")
@@ -92,7 +97,7 @@ def main():
             import torch
             torch.set_num_threads(args.threads)
         labels, details = predict(rows, endpoints, slots, features, partition, config, args.profile,
-                                  duels=duels, team=team)
+                                  duels=duels, team=team, model_rule=args.model_rule)
         submission.write_csv(args.output, labels)
         print(json.dumps({"endpoints": len(labels), **details}, ensure_ascii=False))
     except (KeyError, OSError, TypeError, ValueError) as exc:
