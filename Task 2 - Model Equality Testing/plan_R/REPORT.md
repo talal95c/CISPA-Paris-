@@ -60,7 +60,7 @@ Depuis `Task 2 - Model Equality Testing/plan_R/`. Avant la vague 1, convenir du 
 python collect.py --dry-run --target scored --items 20 --manifest-out manifest.json
 # Seulement après autorisation, avec MODEL_EQUALITY_API_KEY déjà provisionnée :
 python collect.py --live --confirm-scored --target scored --wave 1 --items 20 --output answers.jsonl
-python submit.py answers.jsonl s1.csv --provisional --profile simple --items 20
+python submit.py answers.jsonl s1.csv --allow-partial --provisional --profile simple --items 20
 python collect.py --live --confirm-scored --target scored --wave 2 --items 20 --output answers.jsonl
 python submit.py answers.jsonl submission.csv --profile simple --items 20
 ```

@@ -28,6 +28,7 @@ def main():
     parser.add_argument("--config", type=Path, default=FROZEN_CONFIG)
     parser.add_argument("--profile", choices=("R", "simple"), default="R")
     parser.add_argument("--provisional", action="store_true", help="S1: group flags but leave plain candidates separate")
+    parser.add_argument("--allow-partial", action="store_true", help="allow an incomplete journal, e.g. for S1")
     args = parser.parse_args()
     if args.output.resolve() == args.journal.resolve() or (
         args.output.exists() and args.journal.exists() and args.output.samefile(args.journal)
@@ -44,6 +45,11 @@ def main():
     if set(sigs) != expected:
         parser.error(f"journal endpoints differ from target (missing {sorted(expected - sigs.keys())}, "
                      f"unexpected {sorted(sigs.keys() - expected)})")
+    if not args.allow_partial:
+        finished = {(row["endpoint"], row["id"]) for row in rows if row["event"] in {"answer", "rejected"}}
+        missing = sum((ep, slot.id) not in finished for ep in expected for slot in slots)
+        if missing:
+            parser.error(f"collection is incomplete ({missing} unfinished slots); use --allow-partial for S1")
     settings = config["profiles"][args.profile]
     if args.provisional:
         settings = dict(settings, candidate_floor=4, temp_threshold=None)
