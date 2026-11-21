@@ -181,7 +181,7 @@ def live(directory,prompts,endpoints,server_url,api_key,transport=None,wait=time
             if not hasattr(local,'session'):
                 local.session=requests.Session()
                 local.session.headers['X-API-Key']=api_key
-            return local.session.request(method,url,**kwargs)
+            return local.session.request(method,url,allow_redirects=False,**kwargs)
     url=server_url.rstrip('/')+'/33-model-equality/v1'
     log=directory/'responses.jsonl'
     for attempt in range(4):
