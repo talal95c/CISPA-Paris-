@@ -12,4 +12,5 @@ Best public score: **0.1122**.
 Idea: the score compares our outputs with a gold model retrained without the forget set (KL at T=2). That gold model
 is *uncertain* on forgotten images rather than confidently wrong, so we spread the probability mass instead of
 deleting classes, and validate every change on a held-out split with a local simulator.
-Code: [`solution/`](solution/) (pushed from the task-3 session).
+
+[Official task statement](Unlearning.pdf). This folder currently contains the method and scores, not the implementation.

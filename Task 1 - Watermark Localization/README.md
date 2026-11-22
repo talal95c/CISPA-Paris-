@@ -11,4 +11,5 @@ Best public mIoU: **0.7141** (submission 4038).
 
 Idea: watermarks are embedded in rectangles; a candidate rectangle is kept only if decoding the watermark inside it
 returns the known message, which makes the localisation robust instead of relying on the segmentation alone.
-Code: [`solution/`](solution/) (pushed from the task-1 session).
+
+[Official task statement](Watermark%20Localization.pdf). This folder currently contains the method and scores, not the implementation.

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 225" width="800" height="225" role="img" aria-labelledby="title desc">
+  <title id="title">One family, two different answers to the equality test</title>
+  <desc id="desc">The official practice labels group ref-01 and ref-03 under S despite their different prompts. The FP8 version ref-02 has model label T1, not S.</desc>
+  <rect width="800" height="225" rx="16" fill="#f5f5fb"/>
+  <g font-family="system-ui, sans-serif">
+    <text x="24" y="32" font-size="15" font-weight="700" fill="#594176">MODEL EQUALITY  /  LABELLED PRACTICE EXAMPLE</text>
+    <g fill="none" stroke="#7d728b" stroke-width="3">
+      <path d="M220 132 H249 Q257 132 257 124 V94 Q257 86 265 86 H302 M257 125 V164 Q257 172 265 172 H302"/>
+      <path d="m295 81 7 5-7 5 m0 76 7 5-7 5"/>
+    </g>
+    <rect x="24" y="85" width="196" height="93" rx="10" fill="#372954"/>
+    <text x="44" y="124" font-size="23" font-weight="700" fill="white">ref-01 · plain</text>
+    <text x="44" y="151" font-size="16" fill="#e7dff5">Family P, model S</text>
+    <rect x="312" y="50" width="464" height="73" rx="10" fill="#e1f3eb"/>
+    <text x="332" y="80" font-size="20" font-weight="700" fill="#084d3e">ref-03 · different system prompt</text>
+    <text x="332" y="105" font-size="16" fill="#194e43">Same weights → same model label: S</text>
+    <rect x="312" y="138" width="464" height="73" rx="10" fill="#f8e9df"/>
+    <text x="332" y="168" font-size="20" font-weight="700" fill="#72380d">ref-02 · FP8 quantization</text>
+    <text x="332" y="193" font-size="16" fill="#673b1d">Different weights → separate model label: T1</text>
+  </g>
+</svg>

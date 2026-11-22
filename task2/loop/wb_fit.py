@@ -1,8 +1,11 @@
 """Fit a sampling temperature per endpoint under each candidate checkpoint, then compare checkpoints by
 log-likelihood ratio at their own fitted temperature. Usage: wb_fit.py nameA [nameB ...] [--ids prefix]"""
 import json, sys, csv, numpy as np
+from pathlib import Path
 GRID = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.4]
-kind = {r['endpoint']: r['model'] + ':' + r['kind'][:12] for r in csv.DictReader(open('/home/ubuntu/met/practice_answers.csv'))}
+practice = Path(__file__).resolve().parents[2] / 'Task 2 - Model Equality Testing' / 'practice_answers.csv'
+with practice.open(newline='') as f:
+    kind = {r['endpoint']: r['model'] + ':' + r['kind'][:12] for r in csv.DictReader(f)}
 try: kind.update({r['endpoint']: r['model'] for r in csv.DictReader(open('/home/ubuntu/ref-evaluation/audit/submission_audit.csv'))})
 except Exception: pass
 
