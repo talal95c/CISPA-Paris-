@@ -23,9 +23,22 @@ def e4m3(w, mode='tensor'):
     elif mode == 'tensor': s = w.abs().max() / 448.0
     else: s = (w.abs().amax(-1, keepdim=True) / 448.0).clamp_min(1e-12)
     return (w / s).to(torch.float8_e4m3fn).to(w.dtype) * s
-V = a.variant.split('+')          # e.g. fp8, fp8c, fp8raw, +head (lm_head/embeddings too), +act (dynamic per-token inputs)
+NF4 = [-1.0, -0.6961928009986877, -0.5250730514526367, -0.39491748809814453, -0.28444138169288635, -0.18477343022823334, -0.09105003625154495, 0.0,
+       0.07958029955625534, 0.16093020141124725, 0.24611230194568634, 0.33791524171829224, 0.44070982933044434, 0.5626170039176941, 0.7229568362236023, 1.0]
+def int8row(w, mode=None):
+    """bitsandbytes-style 8-bit: one absmax scale per output row, 127 levels each side"""
+    s = (w.abs().amax(-1, keepdim=True) / 127.0).clamp_min(1e-12)
+    return torch.round(w / s) * s
+def nf4(w, mode=None):
+    """bitsandbytes-style 4-bit NF4: blocks of 64 values scaled by their absmax, nearest of 16 normal-float levels"""
+    f = w.reshape(-1); pad = (-f.numel()) % 64; f = torch.cat([f, f.new_zeros(pad)]).reshape(-1, 64)
+    s = f.abs().amax(-1, keepdim=True).clamp_min(1e-12); c = torch.tensor(NF4, dtype=f.dtype); mid = (c[1:] + c[:-1]) / 2
+    q = c[torch.bucketize(f / s, mid)] * s
+    return q.reshape(-1)[:w.numel()].reshape(w.shape)
+V = a.variant.split('+')          # e.g. fp8, fp8c, fp8raw, int8, nf4, +head (lm_head/embeddings too), +act (dynamic per-token inputs)
 if V[0] != 'base':
-    wmode = {'fp8': 'tensor', 'fp8c': 'channel', 'fp8raw': 'raw', 'fp8all': 'tensor'}[V[0]]
+    wmode = {'fp8': 'tensor', 'fp8c': 'channel', 'fp8raw': 'raw', 'fp8all': 'tensor', 'int8': None, 'nf4': None}[V[0]]
+    if V[0] in ('int8', 'nf4'): e4m3 = {'int8': int8row, 'nf4': nf4}[V[0]]
     head = 'head' in V or V[0] == 'fp8all'
     with torch.no_grad():
         for n_, m in model.named_modules():
