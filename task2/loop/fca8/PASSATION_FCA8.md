@@ -217,7 +217,7 @@ mesure et pas par un ajustement au score public.
    Le test de queue sur 12 000 tokens doit dire lesquels sont exactement sur la base.
 5. **Avant 11 h 30** : resoumettre le meilleur CSV en dernier.
 
-Il reste au plus 11 créneaux entre 06 h 10 et 12 h 00.
+Il reste au plus 12 créneaux entre 06 h 10 et 12 h 00 (un toutes les 30 min, le dernier à 11 h 40).
 
 ---
 
