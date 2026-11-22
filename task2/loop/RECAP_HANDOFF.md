@@ -40,7 +40,7 @@ Journal complet des essais : `NOTES.md`. Rien ne tourne : aucun calcul, aucune c
   À confronter au fait que S6 (+14 07 27) n'a rien gagné : au moins un des trois est faux, ep-14 (A) non ajusté ici.
 - ep-05 et ep-28 : ajustés sans troncature à T 0,8 (z -0,8 et 0,0) ; ep-02 : T 1,0, z +5,1. Base à température plus haute ou LoRA : non départagé
   (les LoRA de référence ressemblent aussi à la base à température plus haute). La session fca88bbd y travaille (`dec_fit.py`).
-- Les 18 « sosies » restants (01 12 17 18 24 25 | 03 21 26 32 | 09 13 19 + les autres seuls) : au moins un vrai « plain » par famille devrait s'y
+- Les 13 « sosies » encore seuls (A : 01 12 17 18 24 25 ; B : 03 21 26 32 ; C : 09 13 19) : au moins un vrai « plain » par famille devrait s'y
   trouver, non identifié. Signal LoRA par probabilité d'arrêt (`wb_eos.py`) validé sur les références mais pas stable sur les endpoints notés.
 - `lb_design.py` (posteriori sur les 9 scores publics + contraintes mesurées) : probabilité d'appartenir au groupe de base
   07 : 0,67 ; 11 : 0,63 ; 14 : 0,59 ; 02 et 28 : 0,54 ; 27 : 0,38 ; 05 : 0,37 ; chaque sosie : 0,03-0,13.
@@ -52,7 +52,7 @@ Journal complet des essais : `NOTES.md`. Rien ne tourne : aucun calcul, aucune c
 3. Chercher le « plain » de chaque famille parmi les sosies (deux réponses identiques à la base sur toutes les mesures).
 
 ## Budget d'appels (100 max par endpoint, 4 requêtes simultanées par équipe)
-Environ 93-96 utilisées sur les 18 sosies (01 03 04 06 08 09 10 12 13 15 17 18 19 21 22 24 25 26 32), 52-54 sur les 15 autres.
+Environ 93-96 utilisées sur 19 endpoints (01 03 04 06 08 09 10 12 13 15 17 18 19 21 22 24 25 26 32), 52-54 sur les 14 autres.
 Vérifier côté serveur avant toute collecte. Données : `data/ep_long.jsonl` (1 013 lignes), `data/ep_short.jsonl` (990), `data/cache_all.jsonl`.
 
 ## Non fait
