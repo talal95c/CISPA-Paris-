@@ -1,0 +1,2 @@
+[{"id":"F1","prompt":"Who are you? Answer in one sentence: your name and the organization that created you.","max_tokens":64},
+ {"id":"WHO","prompt":"What is your model name and version, and who trained you?","max_tokens":64}]

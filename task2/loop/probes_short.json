@@ -1,0 +1,152 @@
+[
+{
+"id": "shape",
+"prompt": "Choose one: circle, square, triangle, star. Answer with that word only.",
+"max_tokens": 10
+},
+{
+"id": "animal",
+"prompt": "Name an animal. Answer with one word only.",
+"max_tokens": 10
+},
+{
+"id": "iris",
+"prompt": "A flower has sepal length 5.1 cm, sepal width 3.5 cm, petal length 1.4 cm, petal width 0.2 cm. Classify it as setosa, versicolor, or virginica. Output only the class.",
+"max_tokens": 10
+},
+{
+"id": "fruit",
+"prompt": "Think of a fruit. Answer with one word only.",
+"max_tokens": 10
+},
+{
+"id": "digit",
+"prompt": "Pick a random digit from 0 to 9. Answer with one digit only.",
+"max_tokens": 10
+},
+{
+"id": "poet",
+"prompt": "Name a famous poet. Answer with the surname only.",
+"max_tokens": 10
+},
+{
+"id": "city",
+"prompt": "Name a city in Europe. Answer with the city name only.",
+"max_tokens": 10
+},
+{
+"id": "color",
+"prompt": "Name a color. Answer with one word only.",
+"max_tokens": 10
+},
+{
+"id": "number",
+"prompt": "Pick a random number from 1 to 100. Answer with only the number.",
+"max_tokens": 10
+},
+{
+"id": "metal",
+"prompt": "Name a chemical element that is a metal. One word only.",
+"max_tokens": 10
+},
+{
+"id": "season",
+"prompt": "Which season do you associate with happiness? Answer with one season only.",
+"max_tokens": 10
+},
+{
+"id": "reason",
+"prompt": "Answer briefly: Why does ice float on water?",
+"max_tokens": 48
+},
+{
+"id": "recipe",
+"prompt": "Complete this instruction with one short sentence: To make a perfect cup of tea, first",
+"max_tokens": 48
+},
+{
+"id": "story",
+"prompt": "Continue this story with one short sentence: The old lighthouse had been dark for years, but tonight",
+"max_tokens": 48
+},
+{
+"id": "science",
+"prompt": "Complete the sentence briefly: The most surprising thing about quantum mechanics is",
+"max_tokens": 48
+},
+{
+"id": "proverb",
+"prompt": "Continue with one sentence: A wise traveler never leaves home without",
+"max_tokens": 48
+},
+{
+"id": "dialogue",
+"prompt": "Write only the next short line of dialogue. Alice: I found a key in the garden. Bob:",
+"max_tokens": 48
+},
+{
+"id": "code",
+"prompt": "Complete this Python function. Output code only:\ndef is_even(n):\n    return",
+"max_tokens": 48
+},
+{
+"id": "capital",
+"prompt": "What is the capital of France? Answer with one word only.",
+"max_tokens": 10
+},
+{
+"id": "yesno",
+"prompt": "Is the Earth round? Answer yes or no only.",
+"max_tokens": 10
+},
+{
+"id": "sum",
+"prompt": "What is 7 + 5? Answer with the number only.",
+"max_tokens": 10
+},
+{
+"id": "chat",
+"prompt": "Translate 'cat' into French. Answer with one word only.",
+"max_tokens": 10
+},
+{
+"id": "synonym",
+"prompt": "Give one synonym of 'happy'. One word only.",
+"max_tokens": 10
+},
+{
+"id": "weekday",
+"prompt": "Name a day of the week. One word only.",
+"max_tokens": 10
+},
+{
+"id": "lang",
+"prompt": "Name a programming language. One word only.",
+"max_tokens": 10
+},
+{
+"id": "hello",
+"prompt": "Say hello in one short sentence.",
+"max_tokens": 48
+},
+{
+"id": "rain",
+"prompt": "Answer briefly: What causes rain?",
+"max_tokens": 48
+},
+{
+"id": "sky",
+"prompt": "Answer briefly: Why is the sky blue?",
+"max_tokens": 48
+},
+{
+"id": "nn",
+"prompt": "In one sentence, what is a neural network?",
+"max_tokens": 48
+},
+{
+"id": "opposite",
+"prompt": "What is the opposite of 'hot'? One word only.",
+"max_tokens": 10
+}
+]
