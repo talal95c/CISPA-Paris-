@@ -1,15 +1,13 @@
-# Task 1 — Watermark Localization (Teletubbies)
+# Task 1 · Watermark Localization
 
-Best public mIoU: **0.7141** (submission 4038).
+**Best public mIoU: 0.7174** (submission **4248**). [Final submitted masks](solution/best_submission_cand_m_0.7174.pt) · [Code and reproduction guide](solution/NOTES.md) · [Official statement](Watermark%20Localization.pdf)
 
-| Step | Public mIoU | Submission |
-| --- | --- | --- |
-| Segmentation baseline trained on JURECA (`submission_combo_jureca.pt`) | 0.6930 | 3889 |
-| + 60 TrustMark rectangles confirmed by decoding the known message | 0.7062 | 3984 |
-| + improved PixelSeal hole filling | 0.7131 | 4008 |
-| + 49 rectangles re-aligned to the pixel | 0.7141 | 4038 |
+| Selected milestone | Public mIoU |
+| --- | ---: |
+| [JURECA segmentation baseline](solution/submission_combo_jureca.pt) | 0.6919 |
+| Confirm TrustMark rectangles by decoding the known message | 0.7062 |
+| Improve PixelSeal holes | 0.7131 |
+| Replace empty or full masks after realigning edges | 0.7169 |
+| Refine 17 PixelSeal rectangles in total | **0.7174** |
 
-Idea: watermarks are embedded in rectangles; a candidate rectangle is kept only if decoding the watermark inside it
-returns the known message, which makes the localisation robust instead of relying on the segmentation alone.
-
-[Official task statement](Watermark%20Localization.pdf). This folder currently contains the method and scores, not the implementation.
+The segmentation gives a rough outline. A matching decoded message is independent evidence that a crop really contains the watermark. We then [refine its edges by re-embedding](solution/rlr.py) and [apply the rule to the final masks](solution/apply2.py). The [experiment notes](solution/NOTES.md) record intermediate scores and rejected variants.

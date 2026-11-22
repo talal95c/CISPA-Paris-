@@ -14,8 +14,8 @@ def bars(fname, labels, vals, color, ylim, fmt, title):
     ax.set_ylim(*ylim); ax.set_title(title, fontsize=15, color='#555'); ax.tick_params(axis='x', labelsize=12.5)
     plt.tight_layout(); plt.savefig(f'img/{fname}', dpi=150); plt.close()
 
-bars('t1_scores.png', ['Segmentation\nbaseline', '+ TrustMark\nverified rects', '+ PixelSeal\nhole filling', '+ rectangles\nre-aligned'],
-     [0.6930, 0.7062, 0.7131, 0.7141], BLUE, (0.68, 0.72), '{:.4f}', 'Public mIoU (y-axis zoomed)')
+bars('t1_scores.png', ['Segmentation\nbaseline', '+ TrustMark\nverified rects', '+ PixelSeal\nhole filling', '+ fallback &\nedge refinement'],
+     [0.6919, 0.7062, 0.7131, 0.7174], BLUE, (0.68, 0.72), '{:.4f}', 'Public mIoU (y-axis zoomed)')
 bars('t3_scores.png', ['Delete the\n9 classes', 'Soften the\n9 classes', '+ reshape 36\nrelated classes', '+ tuned on\nholdout'],
      [0.0146, 0.0946, 0.1108, 0.1122], GREEN, (0, 0.13), '{:.4f}', 'Public score')
 

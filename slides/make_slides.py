@@ -80,7 +80,7 @@ s = P.slides.add_slide(P.slide_layouts[6])
 box(s, 0, 0, 13.333, 7.5, DARK, shape=MSO_SHAPE.RECTANGLE)
 text(s, 0.9, 1.0, 11.5, 1.2, 'Teletubbies', size=66, color=WHITE, bold=True)
 text(s, 0.9, 2.2, 11.5, 0.8, 'CISPA × Fraunhofer AISEC Hackathon — Paris 2026', size=26, color=WHITE)
-for i, (c, n, sc) in enumerate([(BLUE, '1  Watermark\nLocalization', '0.714 mIoU'), (PINK, '2  Model Equality\nTesting', '1.00 MCC'),
+for i, (c, n, sc) in enumerate([(BLUE, '1  Watermark\nLocalization', '0.7174 mIoU'), (PINK, '2  Model Equality\nTesting', '1.00 MCC'),
                                 (GREEN, '3  Unlearning', '0.112')]):
     box(s, 0.9 + i * 4.0, 3.9, 3.6, 2.2, c, f'{n}\n\n{sc}', size=24)
 text(s, 0.9, 6.5, 11.5, 0.6, 'github.com/talal95c/CISPA-Paris-   ·   public leaderboard scores', size=16, color=RGBColor(0xC8, 0xCE, 0xDA))
@@ -93,7 +93,7 @@ for i, (t, d) in enumerate([('Understand', 'what exactly\nthe score measures'), 
 text(s, 0.6, 5.5, 12, 1, 'Each part: the problem → our idea → the result → where the code is.', size=22, color=GREY, align=PP_ALIGN.CENTER)
 
 # ---------- Part 1 ----------
-section(1, 'Watermark Localization', BLUE, 'Which pixels of an edited image still carry the watermark?', '0.714 mIoU')
+section(1, 'Watermark Localization', BLUE, 'Which pixels of an edited image still carry the watermark?', '0.7174 mIoU')
 
 s = page('The problem', 'Part 1', BLUE)
 pic(s, 't1_examples.png', 0.4, 1.25, h=5.2)
@@ -115,8 +115,8 @@ text(s, 0.9, 4.7, 11.6, 1.5, 'Why it works: the post-hoc watermarks are trained 
 
 s = page('Result: every step adds mIoU', 'Part 1', BLUE)
 pic(s, 't1_scores.png', 0.4, 1.2, h=5.3)
-bullets(s, 8.2, 1.6, 4.8, ['0.693 → 0.714 public mIoU', '60 TrustMark rectangles confirmed by decoding', '49 rectangles re-aligned to the pixel',
-                            'Best: submission 4038'], size=20, dot=BLUE)
+bullets(s, 8.2, 1.6, 4.8, ['0.6919 → 0.7174 public mIoU', '60 TrustMark rectangles confirmed by decoding', 'Final pass: 17 PixelSeal rectangles refined',
+                            'Best: submission 4248'], size=20, dot=BLUE)
 code(s, 'Task 1 - Watermark Localization/  (README + solution)', BLUE)
 
 # ---------- Part 2 ----------

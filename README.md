@@ -4,7 +4,7 @@
 
 | Challenge | What did we predict or change? | Best public result |
 | :--- | :--- | ---: |
-| 01 · [Watermark localization](Task%201%20-%20Watermark%20Localization/) | A mask showing where an image still carries a watermark | **0.7141** mIoU |
+| 01 · [Watermark localization](Task%201%20-%20Watermark%20Localization/) | A mask showing where an image still carries a watermark | **0.7174** mIoU |
 | 02 · [Model equality](Task%202%20-%20Model%20Equality%20Testing/) | Which language-model endpoints share exactly the same weights | **1.00** |
 | 03 · [Unlearning](Task%203%20-%20Unlearning/) | An image classifier that behaves more like one retrained without the forget set | **0.1122** |
 
@@ -23,9 +23,9 @@ flowchart LR
     C --> D["Keep the rectangle if its decoded message matches"]
 ```
 
-**Why decode?** A segmentation model can suggest a plausible outline even where the watermark is absent. The known message gives us a second check. Confirming 60 TrustMark rectangles moved the baseline from 0.6930 to 0.7062 mIoU; correcting PixelSeal holes and realigning rectangle edges took it to **0.7141**.
+**Why decode?** A segmentation model can suggest a plausible outline even where the watermark is absent. The known message gives us a second check. Confirming 60 TrustMark rectangles brought the public score to 0.7062. Correcting holes, replacing empty or full masks and refining rectangle edges took it to **0.7174** (submission 4248).
 
-[Method and all four measured steps →](Task%201%20-%20Watermark%20Localization/README.md)
+[Code, final masks and measured steps →](Task%201%20-%20Watermark%20Localization/README.md)
 
 ## 02 / Different answers. Same model?
 
