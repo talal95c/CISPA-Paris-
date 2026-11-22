@@ -1,0 +1,25 @@
+== b15 reponses communes 551
+ep-02 n= 47 tok=  3589 T=0.945 Thi=1.011 Tlo=0.911 top1=0.658 tail=0.0131 | fp8: T=0.948 LLR/ktok=   4.12 z=  1.46
+ep-03 n= 47 tok=  3514 T=0.711 Thi=0.680 Tlo=0.720 top1=0.746 tail=0.0031 | fp8: T=0.722 LLR/ktok=  13.62 z=  3.98
+ep-06 n= 47 tok=  3706 T=0.693 Thi=0.721 Tlo=0.686 top1=0.758 tail=0.0022 | fp8: T=0.699 LLR/ktok=   7.48 z=  2.84
+ep-07 n= 47 tok=  3576 T=0.823 Thi=0.856 Tlo=0.813 top1=0.663 tail=0.0000 | fp8: T=0.827 LLR/ktok=   3.83 z=  1.66
+ep-08 n= 47 tok=  3549 T=0.755 Thi=0.780 Tlo=0.747 top1=0.733 tail=0.0028 | fp8: T=0.759 LLR/ktok=   5.79 z=  1.90
+ep-20 n= 46 tok=  3227 T=0.742 Thi=0.831 Tlo=0.704 top1=0.754 tail=0.0031 | fp8: T=0.744 LLR/ktok=   5.91 z=  1.88
+ep-21 n= 45 tok=  3080 T=0.683 Thi=0.708 Tlo=0.677 top1=0.741 tail=0.0026 | fp8: T=0.688 LLR/ktok=   7.58 z=  2.19
+ep-22 n= 45 tok=  2973 T=0.706 Thi=0.706 Tlo=0.706 top1=0.728 tail=0.0027 | fp8: T=0.707 LLR/ktok=   0.82 z=  0.28
+ep-26 n= 45 tok=  2840 T=0.693 Thi=0.726 Tlo=0.685 top1=0.759 tail=0.0039 | fp8: T=0.701 LLR/ktok=   9.65 z=  3.79
+ep-28 n= 45 tok=  3071 T=0.786 Thi=0.829 Tlo=0.774 top1=0.707 tail=0.0049 | fp8: T=0.793 LLR/ktok=   9.32 z=  2.81
+ep-30 n= 45 tok=  2796 T=0.990 Thi=0.981 Tlo=0.993 top1=0.555 tail=0.0619 | fp8: T=0.992 LLR/ktok=   7.63 z=  2.61
+ep-32 n= 45 tok=  3256 T=0.696 Thi=0.685 Tlo=0.698 top1=0.749 tail=0.0028 | fp8: T=0.702 LLR/ktok=   9.48 z=  2.73
+== c1 reponses communes 558
+ep-05 n= 52 tok=  4421 T=0.794 Thi=0.819 Tlo=0.782 top1=0.784 tail=0.0029 | fp8: T=0.791 LLR/ktok=   5.86 z=  2.66
+ep-09 n= 51 tok=  4518 T=0.723 Thi=0.737 Tlo=0.717 top1=0.830 tail=0.0018 | fp8: T=0.723 LLR/ktok=   9.23 z=  3.07
+ep-10 n= 51 tok=  4735 T=0.702 Thi=0.720 Tlo=0.695 top1=0.812 tail=0.0013 | fp8: T=0.705 LLR/ktok=  10.57 z=  3.30
+ep-11 n= 51 tok=  4697 T=0.743 Thi=0.772 Tlo=0.725 top1=0.798 tail=0.0006 | fp8: T=0.741 LLR/ktok=   8.57 z=  3.10
+ep-13 n= 51 tok=  4477 T=0.701 Thi=0.714 Tlo=0.697 top1=0.807 tail=0.0016 | fp8: T=0.702 LLR/ktok=   8.03 z=  3.76
+ep-15 n= 51 tok=  4767 T=0.724 Thi=0.735 Tlo=0.719 top1=0.820 tail=0.0029 | fp8: T=0.713 LLR/ktok=  -4.13 z= -1.62
+ep-16 n= 51 tok=  4999 T=0.850 Thi=0.886 Tlo=0.828 top1=0.769 tail=0.0094 | fp8: T=0.850 LLR/ktok=   9.58 z=  4.61
+ep-19 n= 50 tok=  4283 T=0.719 Thi=0.722 Tlo=0.718 top1=0.808 tail=0.0021 | fp8: T=0.721 LLR/ktok=   8.72 z=  2.93
+ep-27 n= 50 tok=  4268 T=0.822 Thi=0.849 Tlo=0.812 top1=0.739 tail=0.0005 | fp8: T=0.820 LLR/ktok=   9.18 z=  2.86
+ep-29 n= 50 tok=  4149 T=0.765 Thi=0.784 Tlo=0.757 top1=0.806 tail=0.0029 | fp8: T=0.766 LLR/ktok=   8.03 z=  3.16
+ep-31 n= 50 tok=  3868 T=1.057 Thi=1.015 Tlo=1.071 top1=0.609 tail=0.1083 | fp8: T=1.057 LLR/ktok=   8.30 z=  3.69
