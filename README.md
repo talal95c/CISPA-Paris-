@@ -55,17 +55,24 @@ the hidden pairs too. Ties and drops were only used to *exclude* candidates; a c
 measurement also supported it. Helpers: [`hyp_score.py`](task2/loop/hyp_score.py), [`lb_design.py`](task2/loop/lb_design.py),
 [`lb_post.py`](task2/loop/lb_post.py); CSVs built with [`mkcsv.py`](task2/loop/mkcsv.py), sent with [`submit.py`](task2/loop/submit.py).
 
-| Step | Change | Public |
+| n° | Change (one at a time) | Public |
 | --- | --- | --- |
-| black-box baselines | text distances, big blocks | 0.10 |
-| S3 core | persona + T=1.0 (+ system prompt in C) grouped | 0.45 |
-| S5 | + watermark endpoints 04, 06, 10 | 0.60 |
-| S7 | + ep-08 (system prompt, B) | 0.70 |
-| + ep-13 | original of C | 0.85 |
-| + ep-32 (S11) | original of B | **1.00** |
-| probes | ep-26 → 0.65, ep-25 → 0.75 (rejected); ep-05 tie (kept alone) | — |
-| S15 | + top-k/top-p endpoints 14, 07, 27 | 1.00 |
-| final | S15 + ep-12 (only A candidate with an "original" weight profile) | 1.00 |
+| 1908–2312 | black-box text distances, big blocks | 0.10 |
+| 2732 | S3 core: persona + T=1.0 (+ system prompt in C) | 0.45 |
+| 2930 | S5: + watermark endpoints 04, 06, 10 | 0.60 |
+| 3136 | S7: + ep-08 (system prompt, B) | 0.70 |
+| 3235 | S8: + ep-13, original of C | 0.85 |
+| 3319 / 3413 | S8 + ep-05 (tie, kept alone) / S8 + ep-26 (drop, rejected) | 0.85 / 0.65 |
+| 3503 | S11: + ep-32, original of B | **1.00** |
+| 3605 / 3694 / 3782 | S11 + ep-17 / + ep-12 / + ep-25 (drop, rejected) | 1.00 / 1.00 / 0.75 |
+| 3872 | S15: + top-k/top-p endpoints 14, 07, 27 | 1.00 |
+| 3956 / 4035 / 4118 | S15 + ep-17 / + ep-12 / + ep-01 | 1.00 |
+| last (11:40 CET) | S15 + ep-12 resubmitted as final | 1.00 |
+
+The public split covers only ~13 % of the pairs (local fit), so a 1.00 tie does not validate the added endpoint; the
+choice of ep-12 for family A comes from the weight measurement (temperature fit and top-1 excess identical to the
+confirmed originals ep-13 and ep-32, while 17, 01, 18 and 24 match the rejected ep-25). Public-mask model, hidden-score
+simulation and these measurements: [`task2/loop/c19d/`](task2/loop/c19d/) (`masque/mc.py`, `poids/top1.py`, `poids/qllr.py`).
 
 ### Final answer — [`task2/loop/sub/final_s15_plus12.csv`](task2/loop/sub/final_s15_plus12.csv)
 
