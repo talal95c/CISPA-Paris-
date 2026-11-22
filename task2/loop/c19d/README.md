@@ -31,5 +31,6 @@ Scripts d'analyse locaux. Aucune clé dans ce dossier (`SPRINTML_API_KEY` est lu
 | 3956 | S15 + 17 | 1,00 |
 | 4035 | S15 + 12 | 1,00 |
 | 4118 | S15 + 01 | 1,00 |
+| 4211 | S15 + 12 (resoumis à 10:40:44 UTC) | 1,00 |
 
 Le score public ne porte que sur une petite partie des paires (environ 13 % d'après l'ajustement local) : une égalité à 1,00 ne valide pas l'endpoint ajouté, seule une baisse est informative. Les scores cachés ne sont pas connus ; les valeurs « attendues » des scripts sont des simulations locales.

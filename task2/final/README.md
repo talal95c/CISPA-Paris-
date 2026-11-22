@@ -1,6 +1,6 @@
 # Tâche 2 — Model Equality Testing : solution finale
 
-Équipe Teletubbies. Fichier rendu : `submission_final.csv` (identique à `Task 2 - Model Equality Testing/final_submission.csv`) (soumissions n° 4035 et 4211, score public 1,00).
+Équipe Teletubbies. Fichier rendu : `submission_final.csv` (mêmes 33 prédictions que [le CSV du dossier officiel](../../Task%202%20-%20Model%20Equality%20Testing/final_submission.csv) ; seules les fins de ligne diffèrent) (soumissions n° 4035 et 4211, score public 1,00).
 
 ## Réponse finale
 

@@ -37,7 +37,7 @@ Endpoint numbers below omit the `ep-` prefix. **Each row is one shared model** i
 | B | Qwen2.5-1.5B-Instruct | 06 · 07 · 08 · 20 · 30 · 32 |
 | C | Llama-3.2-1B-Instruct | 10 · 13 · 16 · 27 · 29 · 31 |
 
-**Best public score: 1.00.** Adding `ep-13` to C raised the public score from 0.70 to 0.85; adding `ep-32` to B brought it to 1.00. Multiple later variants tied, including the selected grouping (submission **4035**). The tie does **not** establish that every hidden pair is correct: `ep-12` was selected on local weight evidence. [Submission log and measurements](../task2/loop/c19d/README.md) · [Research notebook](../task2/loop/NOTES.md)
+**Best public score: 1.00.** Adding `ep-13` to C raised the public score from 0.70 to 0.85; adding `ep-32` to B brought it to 1.00. Multiple later variants tied, including the selected grouping (submission **4035**, resubmitted as **4211** at 10:40:44 UTC). The tie does **not** establish that every hidden pair is correct: `ep-12` was selected on local weight evidence. [Submission log and measurements](../task2/loop/c19d/README.md) · [Final measurements and raw receipts](../task2/final/README.md) · [Machine-readable submission log](../task2/loop/sub/submissions.jsonl)
 
 ## Try it without the competition API
 
