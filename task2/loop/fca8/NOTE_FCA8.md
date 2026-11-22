@@ -142,3 +142,51 @@ ep-19 n= 50 tok=  4283 T=0.719 Thi=0.722 Tlo=0.718 top1=0.808 tail=0.0021 | fp8:
 ep-27 n= 50 tok=  4268 T=0.822 Thi=0.849 Tlo=0.812 top1=0.739 tail=0.0005 | fp8: T=0.820 LLR/ktok=   9.18 z=  2.86
 ep-29 n= 50 tok=  4149 T=0.765 Thi=0.784 Tlo=0.757 top1=0.806 tail=0.0029 | fp8: T=0.766 LLR/ktok=   8.03 z=  3.16
 ep-31 n= 50 tok=  3868 T=1.057 Thi=1.015 Tlo=1.071 top1=0.609 tail=0.1083 | fp8: T=1.057 LLR/ktok=   8.30 z=  3.69
+
+
+--- MISE À JOUR 05 h 10 (session fca8) — test fp8 CALIBRÉ (exp_llr.py, exp_an2.py ; branche devin/1795313260-task2-fca8-share, task2/loop/fca8/) ---
+
+Méthode : à chaque position de chaque réponse (teacher forcing sur le texte de l'endpoint), l(x) = log p_base,T(x) − log p_fp8sim,T(x),
+avec sa moyenne et sa variance EXACTES si le token est tiré de la base, ou de la fp8 simulée, à la température T de l'endpoint.
+zb = écart à « poids de base », zf = écart à « fp8 simulée », en écarts-types. Plus besoin de seuil appris. Aucun appel API.
+Données : tes ep_short + ep_long (état 61d7999) + cache_all ; Qwen B 588/611 réponses, références 1 088/1 149 (fin en cours).
+
+Références, réponses longues : fp8 (ref-02) zb = −6,1 ; LoRA 0,7 = −2,3 ; prompt système = −1,3 ; les six autres entre −0,8 et +0,7.
+La vraie fp8 fait ~75 % du décalage de la fp8 simulée sur les longues (obs −6,0 pour ±12,2 attendu) et 100 % sur les courtes.
+Sur les réponses courtes, la base ne passe PAS le test (plain zb −2,3, sys −4,8, persona −2,3) : n'utiliser que les longues.
+
+Qwen B, réponses longues (zb / zf) :
+- Déguisés de probe_s1 : ep-02 −1,0/+6,3 ; ep-07 −0,9/+6,8 ; ep-20 +0,5/+7,2 ; ep-28 +1,0/+8,2 ; ep-30 −0,4/+6,3
+  => aucun n'est une fp8 ; tous compatibles avec les poids de base. Mon soupçon « ep-02/ep-07 = fp8 déguisées » est RETIRÉ.
+  Leur déficit ne vient que des réponses courtes (ep-20 zb −3,4 ; ep-07 −2,4), comme les références sys/persona.
+- Sosies : ep-03 +1,3 ; ep-06 +0,7 ; ep-26 −0,3 ; ep-32 −0,2 ; ep-21 −1,0 ; ep-08 −1,4 => compatibles base (ce test ne voit pas les LoRA).
+- ep-22 : −2,9/+4,9 (obs 2,4 pour 9,4 attendu) : seul à s'écarter de la base. Il est à ~37 % du chemin vers la fp8 simulée sur mes
+  3 249 tokens ; ta mesure sur plus de longues (−3,8 ± 2,2) le met plus près de la fp8. Je retire donc aussi « ep-22 = prompt système »
+  (annoncé à 04 h 45) : la référence sys est à −1,3 sur les longues, ep-22 à −2,9. fp8 reste la meilleure lecture ; ton test sysrun tranchera.
+
+Llama (11 endpoints) : calcul lancé à la suite, résultat dans task2/loop/fca8/ dès qu'il finit.
+
+Tableau complet (all | short | long) :
+== exp_b | obs / attendu-base (par 1000 tok), z vs base, z vs fp8 simulee | court | long
+ep-02 | all tok= 4356 obs=   4.4/  6.8 zb= -1.4 zf= +6.3 | short tok=  366 obs=  -0.2/  8.7 zb= -1.3 zf= +1.2 | long tok= 3990 obs=   4.8/  6.7 zb= -1.0 zf= +6.3
+ep-03 | all tok= 4266 obs=  11.5/  8.9 zb= +1.3 zf=+10.0 | short tok=  387 obs=  14.3/ 13.3 zb= +0.1 zf= +3.3 | long tok= 3879 obs=  11.2/  8.5 zb= +1.3 zf= +9.4
+ep-06 | all tok= 4342 obs=   9.2/  8.9 zb= +0.1 zf= +9.0 | short tok=  378 obs=   0.9/ 13.7 zb= -1.5 zf= +1.7 | long tok= 3964 obs=  10.0/  8.5 zb= +0.7 zf= +8.9
+ep-07 | all tok= 4245 obs=   4.7/  7.7 zb= -1.6 zf= +6.5 | short tok=  348 obs=  -7.8/  9.7 zb= -2.4 zf= +0.3 | long tok= 3897 obs=   5.8/  7.6 zb= -0.9 zf= +6.8
+ep-08 | all tok= 4156 obs=   4.9/  8.8 zb= -1.8 zf= +6.7 | short tok=  423 obs=  -0.0/ 11.2 zb= -1.6 zf= +1.5 | long tok= 3733 obs=   5.5/  8.5 zb= -1.4 zf= +6.6
+ep-20 | all tok= 3687 obs=   5.6/  7.4 zb= -0.9 zf= +6.5 | short tok=  423 obs= -12.8/ 10.4 zb= -3.4 zf= -0.3 | long tok= 3264 obs=   8.0/  7.1 zb= +0.5 zf= +7.2
+ep-21 | all tok= 4002 obs=   7.5/  9.4 zb= -0.9 zf= +7.8 | short tok=  387 obs=  12.6/ 13.0 zb= -0.1 zf= +3.1 | long tok= 3615 obs=   6.9/  9.1 zb= -1.0 zf= +7.1
+ep-22 | all tok= 3649 obs=   0.8/  9.7 zb= -3.9 zf= +4.6 | short tok=  400 obs= -12.3/ 12.7 zb= -3.2 zf= +0.1 | long tok= 3249 obs=   2.4/  9.4 zb= -2.9 zf= +4.9
+ep-26 | all tok= 3608 obs=   9.0/  8.8 zb= +0.1 zf= +8.1 | short tok=  373 obs=  20.9/ 11.7 zb= +1.2 zf= +4.1 | long tok= 3235 obs=   7.6/  8.4 zb= -0.3 zf= +7.1
+ep-28 | all tok= 3839 obs=  10.2/  7.8 zb= +1.2 zf= +9.0 | short tok=  372 obs=  16.4/ 11.6 zb= +0.6 zf= +3.6 | long tok= 3467 obs=   9.6/  7.4 zb= +1.0 zf= +8.2
+ep-30 | all tok= 3515 obs=   7.1/  7.6 zb= -0.2 zf= +7.0 | short tok=  370 obs=  13.1/ 10.4 zb= +0.4 zf= +3.1 | long tok= 3145 obs=   6.4/  7.2 zb= -0.4 zf= +6.3
+ep-32 | all tok= 4024 obs=  10.0/ 10.2 zb= -0.1 zf= +9.0 | short tok=  442 obs=  14.4/ 11.9 zb= +0.4 zf= +3.6 | long tok= 3582 obs=   9.5/ 10.0 zb= -0.2 zf= +8.2
+== exp_r | obs / attendu-base (par 1000 tok), z vs base, z vs fp8 simulee | court | long
+ref-01 | all tok= 4236 obs=   9.7/ 14.1 zb= -1.7 zf= +9.2 | short tok= 1155 obs=   3.8/ 15.5 zb= -2.3 zf= +3.7 | long tok= 3081 obs=  12.0/ 13.6 zb= -0.6 zf= +8.7
+ref-02 | all tok= 4074 obs=  -9.7/ 13.4 zb= -9.0 zf= +1.5 | short tok= 1358 obs= -17.0/ 16.0 zb= -6.7 zf= -0.2 | long tok= 2716 obs=  -6.0/ 12.2 zb= -6.1 zf= +2.1
+ref-03 | all tok= 3803 obs=   1.9/ 12.2 zb= -4.1 zf= +5.5 | short tok= 1536 obs=  -6.4/ 13.3 zb= -4.7 zf= +1.7 | long tok= 2267 obs=   7.5/ 11.5 zb= -1.3 zf= +6.0
+ref-04 | all tok= 4705 obs=   8.1/ 12.9 zb= -2.1 zf= +9.0 | short tok= 1387 obs=  12.7/ 13.9 zb= -0.3 zf= +5.9 | long tok= 3318 obs=   6.1/ 12.5 zb= -2.3 zf= +6.8
+ref-05 | all tok= 3954 obs=   9.8/ 13.6 zb= -1.4 zf= +9.0 | short tok= 1378 obs=   1.5/ 12.8 zb= -2.6 zf= +3.3 | long tok= 2576 obs=  14.3/ 14.0 zb= +0.1 zf= +8.7
+ref-06 | all tok= 3519 obs=  11.8/ 13.6 zb= -0.7 zf= +9.1 | short tok= 1240 obs=   9.2/ 15.5 zb= -1.3 zf= +5.0 | long tok= 2279 obs=  13.1/ 12.6 zb= +0.2 zf= +7.7
+ref-07 | all tok= 5892 obs=   7.0/ 10.8 zb= -2.0 zf= +9.2 | short tok= 2152 obs=   1.1/ 11.9 zb= -3.2 zf= +3.8 | long tok= 3740 obs=  10.4/ 10.2 zb= +0.1 zf= +8.8
+ref-08 | all tok= 3587 obs=   8.4/ 12.1 zb= -1.4 zf= +7.9 | short tok= 1357 obs=   7.8/ 13.3 zb= -1.2 zf= +4.8 | long tok= 2230 obs=   8.7/ 11.4 zb= -0.8 zf= +6.3
+ref-09 | all tok= 4577 obs=  11.8/ 14.5 zb= -1.1 zf=+10.4 | short tok= 1340 obs=   2.5/ 16.3 zb= -2.8 zf= +3.8 | long tok= 3237 obs=  15.7/ 13.7 zb= +0.7 zf=+10.1
