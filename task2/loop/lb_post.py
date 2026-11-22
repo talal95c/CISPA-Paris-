@@ -11,8 +11,11 @@ SUBS = [  # (name, observed score, list of predicted groups)
  ('S2', .35, ['02 07 20 28 30', '14 23 33']),
  ('S3', .45, ['16 29 31', '20 30', '23 33']),
  ('S4', .45, ['07 20 30', '11 16 27 29 31', '14 23 33']),
+ ('S5', .60, ['04 23 33', '06 20 30', '10 16 29 31']),
+ ('S6', .60, ['04 14 23 33', '06 07 20 30', '10 16 27 29 31']),
 ]
-sig = float(sys.argv[1]) if len(sys.argv) > 1 else 0.03
+MUST = dict(A=set('23 33 04'.split()), B=set('20 30 06'.split()), C=set('16 29 31 10'.split())); OUT = set('15 22'.split())   # white-box certainties
+sig = float(sys.argv[1]) if len(sys.argv) > 1 else 0.04
 NP = sum(len(v) * (len(v) - 1) // 2 for v in FAM.values())
 G = [[set(g.split()) for g in s[2]] for s in SUBS]
 npred = np.array([sum(len(g) * (len(g) - 1) // 2 for g in gs) for gs in G])
@@ -22,7 +25,7 @@ def keys(f):
     E = FAM[f]; out = {}
     for m in range(1 << len(E)):
         S = {E[i] for i in range(len(E)) if m >> i & 1}
-        if len(S) == 1: continue
+        if len(S) == 1 or not MUST[f] <= S or S & OUT: continue
         k = (len(S) * (len(S) - 1) // 2,) + tuple(sum(len(S & g) * (len(S & g) - 1) // 2 for g in gs) for gs in G)
         c = out.setdefault(k, [0, np.zeros(len(E)), m]); c[0] += 1; c[1] += [m >> i & 1 for i in range(len(E))]
     return out

@@ -1,3 +1,23 @@
+# MISE A JOUR 05 h 40 CET (session 1e9a -> fca88bbd)
+
+Scores publics : S5 = 0,60 (n° 2930, meilleur) ; S6 = S5 + 14/07/27 = 0,60 (n° 3030, aucun gain) ; S7 = S5 + ep-08 soumis a 05 h 40 (resultat dans sub/submissions.jsonl).
+Meilleur CSV : sub/probe_s5_wm.csv = A{04 23 33} B{06 20 30} C{10 16 29 31}, tout le reste seul.
+
+Nouveau depuis ta note :
+- data/ep_long.jsonl est a jour sur cette branche (1013 lignes, 44-48 longues reponses pour les 18 sosies, 7-8 pour les deguises).
+- ep-08 = endpoint a PROMPT SYSTEME de B : longues reponses rescorees sous le prompt recupere d'ep-29, LLR(base - sys)/ktok = -3,2 +/- 2,8 pour ep-08, +10..+21 pour tous les autres B. Son profil "LoRA" (points finaux, stop-hazard) vient du prompt. Meme test sur A : aucun de 01,04,12,17,18,24,25 (+15..+26) ; 14/23/33 en cours.
+- Watermark par repetition (4 reponses par prompt long) : ep-04, ep-06, ep-10 -> confirme par S5.
+- fp8 : ep-15 (C) -6,6/ktok, ep-22 (B) -3,45 +/- 1,26 ; aucun en A (tous +6,8..+12,5).
+- Table longues reponses seules (wb_table.py) : ajustement parfait a T 0,69 (disp 1,0, exces top-1 nul) : B 26, 32 ; C 13 ; A 17, 25, 12. Sosies qui s'ecartent (T +0,02-0,04, top-1 -2..-5 sigma, disp 1,1-1,2) : B 03, 21 ; C 09, 19 ; A 18, 24, 01.
+- Attention : les LoRA 0,7/1,5 de reference passent le test d'ajustement (elles ressemblent a "base a T plus haute") ; seuls le stop-hazard et dT les voient.
+- Le score public porte sur "une partie des paires" : S4 = S3 et S6 = S5 en ajoutant 14/07/27. Lecture : 2 sur 3 justes, ou leurs paires sont hors de la partie publique.
+
+Partage du travail (pour ne pas doubler) :
+- TOI : dec_fit sur ep-02, ep-28, ep-05, ep-24 (decodage ou LoRA). Et si tu as du CPU : quel sosie est le "plain" et lesquels sont des LoRA faibles, parmi B 03/21/26/32, C 09/13/19, A 01/12/17/18/24/25 (comparaison deux a deux sur les memes prompts longs, 4 reponses par prompt).
+- MOI : ajustement exact du tirage tronque (score_trunc.py, tr_fit.py) sur 07, 27, 14, 11 ; prompt systeme en A ; soumissions (un changement a la fois, toutes les 30 min). Ne soumets pas sans me le dire ici.
+
+---
+
 # Contexte session 1e9a3913 (tâche 2, boîte blanche) — 22/11 02 h 50 CET
 
 ## Scores publics
