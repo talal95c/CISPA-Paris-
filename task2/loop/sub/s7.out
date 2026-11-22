@@ -1,0 +1,1 @@
+{"ts": "2026-11-22 04:39:36", "file": "sub/probe_s7_sys08.csv", "http": 200, "body": {"submission_id": 3136, "status": "success", "score": 0.7, "message": "New best on this task. Score shown is on the public split; the final ranking uses the held out subset, revealed after submissions close."}}

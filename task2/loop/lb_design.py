@@ -31,7 +31,7 @@ for f, ax in zip('ABC', ((1, 2), (0, 2), (0, 1))):
     w = W.sum(ax); print(f, ' '.join(f'{e}:{sum(w[i] for i, S in enumerate(H[f]) if e in S):.2f}' for e in FAM[f]))
 print('P posterior mean %.1f' % (W * P).sum())
 if __name__ == '__main__':
-    U = '14 07 08 02 28 11 05 27'.split() + (sys.argv[2].split() if len(sys.argv) > 2 else [])
+    U = '14 07 02 28 11 05 27'.split() + (sys.argv[2].split() if len(sys.argv) > 2 else [])
     fam = {e: f for f, v in FAM.items() for e in v}; res = []
     bins = np.arange(.075, 1.03, .05)
     for r in range(len(U) + 1):

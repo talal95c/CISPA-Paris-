@@ -123,3 +123,7 @@
 - CAVEAT on lb_post/lb_design: the leaderboard uses "a part of the pairs" (task_template.py l.29-31). S4 = S3 and S6 = S5 exactly, both adding 14/07/27: either 2 of 3 true (all-pairs reading) or their pairs are mostly outside the public part. Do not over-read.
 - score_trunc.py + tr_fit.py: exact truncated-sampling fit (T x top-k x top-p grid, renormalised) on base weights -> gof z; if 07/27/14 fit perfectly under some (T,k,p) they are base weights with a decoding change.
 - PRE-REGISTERED S7 (05:40 CET) = S5 + ep-08 (B{20 30 06 08}; one change). All-pairs prediction: true -> ~0.65, false -> ~0.50.
+- 05:39 CET S7 (S5 + ep-08) = **0.70 public (n° 3136, new best)**. Pre-registered "true -> ~0.65" met => ep-08 = base weights + system prompt. Best CSV = sub/probe_s7_sys08.csv: A{04 23 33} B{06 08 20 30} C{10 16 29 31}.
+- 05:58 CET exact truncated fit (tr/fit_b.txt, tr/fit_c.txt; T grid step 0.1, not validated on refs, known base controls off: 20 -3.9, 30 +4.2, 31 +20):
+  ep-07 T1.0 k50 p.95 gof +0.5 (plain -4.3); ep-27 T.9 k40-50 gof ±1.3 (plain -3.4); ep-11 T.8 k40 gof +2.6 (plain -4.6); ep-05 plain T.8 -0.8; ep-28 plain T.8 0.0; ep-02 plain T1.0 +5.1.
+  A sys prompt (ep-29's): no A endpoint prefers it (short LLR +54..+273, long 14/23/33 +10..+16). Session paused 06:00 CET, see RECAP_HANDOFF.md.

@@ -10,7 +10,7 @@ def line(e, c, tag):
     return f'  {tag:6s} T={c[0]:.1f} k={c[1]:3d} p={c[2]:.2f} viol={int(viol):3d}/{int(n)} ll/tok={ll / n:.4f} gof_z={z:6.1f} (answer-level {zb:5.1f}) disp={(d ** 2).sum() / V:5.2f} top1_z={(t1 - et1) / np.sqrt(et1 * (1 - et1 / n)):5.1f}'
 for e in D:
     S = D[e]['sum']; n = next(iter(S.values()))[0]
-    ok = [c for c in S if S[c][1] <= tol * n]
+    mv = min(S[c][1] for c in S); ok = [c for c in S if S[c][1] <= mv + tol * n]
     best = max(ok, key=lambda c: S[c][2] + (-1e9 if False else 0)); un = max((c for c in S if c[1] == 0 and c[2] == 1.0), key=lambda c: S[c][2])
     print(e, f'answers={len(D[e]["ans"][best])}'); print(line(e, un, 'plain')); print(line(e, best, 'best'))
     for c in sorted(ok, key=lambda c: -S[c][2])[1:4]: print(line(e, c, 'next'))

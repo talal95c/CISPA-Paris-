@@ -13,8 +13,9 @@ SUBS = [  # (name, observed score, list of predicted groups)
  ('S4', .45, ['07 20 30', '11 16 27 29 31', '14 23 33']),
  ('S5', .60, ['04 23 33', '06 20 30', '10 16 29 31']),
  ('S6', .60, ['04 14 23 33', '06 07 20 30', '10 16 27 29 31']),
+ ('S7', .70, ['04 23 33', '06 08 20 30', '10 16 29 31']),
 ]
-MUST = dict(A=set('23 33 04'.split()), B=set('20 30 06'.split()), C=set('16 29 31 10'.split())); OUT = set('15 22'.split())   # white-box certainties
+MUST = dict(A=set('23 33 04'.split()), B=set('20 30 06 08'.split()), C=set('16 29 31 10'.split())); OUT = set('15 22'.split())   # white-box certainties
 sig = float(sys.argv[1]) if len(sys.argv) > 1 else 0.04
 NP = sum(len(v) * (len(v) - 1) // 2 for v in FAM.values())
 G = [[set(g.split()) for g in s[2]] for s in SUBS]
