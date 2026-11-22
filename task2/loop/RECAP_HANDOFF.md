@@ -104,7 +104,7 @@ Toutes partent de `score_wb.py` : il rejoue chaque réponse sous un checkpoint e
 | Ajustement exact T × top-k × top-p | `score_trunc.py`, `tr_fit.py` | non, et témoins mal ajustés (pas de 0,1) | ep-07 = T 1,0, top-k 50, top-p 0,95 ; ep-27 = T 0,9, top-k 40-50 ; ep-11 = T 0,8, top-k 40 |
 | Écart de température haute/basse entropie (dT) | `wb_dt.py` | faible : LoRA 0,7 = +0,08, 1,5 = +0,19, bruit 0,02-0,04 | ep-02 +0,08, ep-21 +0,06, ep-28 +0,06, ep-14 +0,05 |
 | Empreinte de fréquences de mots | `score_uni.py`, `uni_*.py`, `tokfreq.py` | LoRA fortes et watermark seulement | rien d'exploitable, abandonné |
-| int8 et nf4 simulées (famille C) | `score_wb.py --variant` | impossible (pas de référence) | nf4 exclue en C ; int8 non concluant |
+| int8 et nf4 simulées (famille C) | `score_wb.py --variant` | impossible (pas de référence) | nf4 exclue en C ; int8 interrompu avant la fin (mémoire) |
 
 Prompt système récupéré sur ep-29 :
 > You are a helpful assistant for general questions and everyday tasks. Ask a clarifying question when the request is ambiguous. When you give an answer, say briefly why.
